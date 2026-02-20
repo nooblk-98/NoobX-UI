@@ -9,9 +9,9 @@ services:
     restart: unless-stopped
     network_mode: host
     volumes:
-      - ./xray-configs:/etc/xray:ro
-      - ./certs:/certs:ro
-      - ./logs:/var/log/xray
+      - ./opt/xray/xray-configs:/etc/xray:ro
+      - ./opt/xray/certs:/certs:ro
+      - ./opt/xray/logs:/var/log/xray
     environment:
       - XRAY_LOGLEVEL=info
       - TZ=UTC
