@@ -15,11 +15,6 @@ services:
     environment:
       - XRAY_LOGLEVEL=info
       - TZ=UTC
-    ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080"
-      - "8443:8443"
     stdin_open: true
     tty: true
     cap_add:

@@ -114,6 +114,75 @@ fi
 echo -e "${GREEN}✓ Email: $EMAIL${NC}"
 echo ""
 
+# Port Configuration
+echo -e "${YELLOW}━━━ Port Configuration ━━━${NC}"
+echo "Configure which ports to use for Xray server:"
+echo ""
+
+# Port 80 (WS)
+read -p "Enable Port 80 (HTTP WebSocket)? (yes/no) [default: yes]: " ENABLE_80
+ENABLE_80=${ENABLE_80:-yes}
+if [ "$ENABLE_80" = "yes" ]; then
+    read -p "  Custom port (press Enter for 80): " PORT_80
+    PORT_80=${PORT_80:-80}
+    read -p "  Custom path (press Enter for /ws): " PATH_80
+    PATH_80=${PATH_80:-/ws}
+    echo -e "  ${GREEN}✓ Port $PORT_80 enabled with path $PATH_80${NC}"
+else
+    PORT_80=80
+    PATH_80=/ws
+    echo -e "  ${YELLOW}⊘ Port 80 disabled${NC}"
+fi
+echo ""
+
+# Port 8080 (WS)
+read -p "Enable Port 8080 (Alternative WebSocket)? (yes/no) [default: yes]: " ENABLE_8080
+ENABLE_8080=${ENABLE_8080:-yes}
+if [ "$ENABLE_8080" = "yes" ]; then
+    read -p "  Custom port (press Enter for 8080): " PORT_8080
+    PORT_8080=${PORT_8080:-8080}
+    read -p "  Custom path (press Enter for /ws8080): " PATH_8080
+    PATH_8080=${PATH_8080:-/ws8080}
+    echo -e "  ${GREEN}✓ Port $PORT_8080 enabled with path $PATH_8080${NC}"
+else
+    PORT_8080=8080
+    PATH_8080=/ws8080
+    echo -e "  ${YELLOW}⊘ Port 8080 disabled${NC}"
+fi
+echo ""
+
+# Port 8443 (TLS+WS)
+read -p "Enable Port 8443 (WebSocket + TLS)? (yes/no) [default: yes]: " ENABLE_8443
+ENABLE_8443=${ENABLE_8443:-yes}
+if [ "$ENABLE_8443" = "yes" ]; then
+    read -p "  Custom port (press Enter for 8443): " PORT_8443
+    PORT_8443=${PORT_8443:-8443}
+    read -p "  Custom path (press Enter for /ws8443): " PATH_8443
+    PATH_8443=${PATH_8443:-/ws8443}
+    echo -e "  ${GREEN}✓ Port $PORT_8443 enabled with path $PATH_8443 (TLS)${NC}"
+else
+    PORT_8443=8443
+    PATH_8443=/ws8443
+    echo -e "  ${YELLOW}⊘ Port 8443 disabled${NC}"
+fi
+echo ""
+
+# Port 443 (TLS+WS)
+read -p "Enable Port 443 (WebSocket + TLS - RECOMMENDED)? (yes/no) [default: yes]: " ENABLE_443
+ENABLE_443=${ENABLE_443:-yes}
+if [ "$ENABLE_443" = "yes" ]; then
+    read -p "  Custom port (press Enter for 443): " PORT_443
+    PORT_443=${PORT_443:-443}
+    read -p "  Custom path (press Enter for /ws443): " PATH_443
+    PATH_443=${PATH_443:-/ws443}
+    echo -e "  ${GREEN}✓ Port $PORT_443 enabled with path $PATH_443 (TLS)${NC}"
+else
+    PORT_443=443
+    PATH_443=/ws443
+    echo -e "  ${YELLOW}⊘ Port 443 disabled${NC}"
+fi
+echo ""
+
 # Certificate type selection
 echo "Choose certificate type:"
 echo "1) Let's Encrypt (production) - requires domain to be accessible"
@@ -130,6 +199,11 @@ echo -e "${YELLOW}Summary:${NC}"
 echo "  Domain: $DOMAIN"
 echo "  Email: $EMAIL"
 echo "  Certificate: $([ "$CERT_TYPE" = "1" ] && echo "Let's Encrypt" || echo "Self-signed")"
+echo "  Ports enabled:"
+[ "$ENABLE_80" = "yes" ] && echo "    - Port $PORT_80 (WS) path: $PATH_80"
+[ "$ENABLE_8080" = "yes" ] && echo "    - Port $PORT_8080 (WS) path: $PATH_8080"
+[ "$ENABLE_8443" = "yes" ] && echo "    - Port $PORT_8443 (TLS+WS) path: $PATH_8443"
+[ "$ENABLE_443" = "yes" ] && echo "    - Port $PORT_443 (TLS+WS) path: $PATH_443"
 echo ""
 read -p "Continue with these settings? (yes/no): " CONFIRM
 if [ "$CONFIRM" != "yes" ]; then
@@ -464,21 +538,29 @@ echo ""
 echo "1️⃣ VLESS Connection Strings (ready to import):"
 echo ""
 
-echo -e "${YELLOW}━━━ Port 80 (HTTP WebSocket) ━━━${NC}"
-echo "vless://${UUID_80}@${DOMAIN}:80?path=/ws&type=ws#Port80-WS"
-echo ""
+if [ "$ENABLE_80" = "yes" ]; then
+    echo -e "${YELLOW}━━━ Port ${PORT_80} (HTTP WebSocket) ━━━${NC}"
+    echo "vless://${UUID_80}@${DOMAIN}:${PORT_80}?path=${PATH_80}&type=ws#Port${PORT_80}-WS"
+    echo ""
+fi
 
-echo -e "${YELLOW}━━━ Port 8080 (Alternative WebSocket) ━━━${NC}"
-echo "vless://${UUID_8080}@${DOMAIN}:8080?path=/ws8080&type=ws#Port8080-WS"
-echo ""
+if [ "$ENABLE_8080" = "yes" ]; then
+    echo -e "${YELLOW}━━━ Port ${PORT_8080} (Alternative WebSocket) ━━━${NC}"
+    echo "vless://${UUID_8080}@${DOMAIN}:${PORT_8080}?path=${PATH_8080}&type=ws#Port${PORT_8080}-WS"
+    echo ""
+fi
 
-echo -e "${YELLOW}━━━ Port 8443 (WebSocket + TLS) ━━━${NC}"
-echo "vless://${UUID_8443}@${DOMAIN}:8443?path=/ws8443&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port8443-TLS-WS"
-echo ""
+if [ "$ENABLE_8443" = "yes" ]; then
+    echo -e "${YELLOW}━━━ Port ${PORT_8443} (WebSocket + TLS) ━━━${NC}"
+    echo "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?path=${PATH_8443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_8443}-TLS-WS"
+    echo ""
+fi
 
-echo -e "${GREEN}━━━ Port 443 (WebSocket + TLS - RECOMMENDED) ━━━${NC}"
-echo "vless://${UUID_443}@${DOMAIN}:443?path=/ws443&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port443-TLS-WS"
-echo ""
+if [ "$ENABLE_443" = "yes" ]; then
+    echo -e "${GREEN}━━━ Port ${PORT_443} (WebSocket + TLS - RECOMMENDED) ━━━${NC}"
+    echo "vless://${UUID_443}@${DOMAIN}:${PORT_443}?path=${PATH_443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_443}-TLS-WS"
+    echo ""
+fi
 
 # Try to generate QR codes if qrencode is available
 if command -v qrencode &> /dev/null; then
@@ -487,17 +569,45 @@ if command -v qrencode &> /dev/null; then
     
     mkdir -p qrcodes
     
-    echo "Creating QR codes for all ports..."
-    qrencode -t PNG -s 10 -o qrcodes/port80.png "vless://${UUID_80}@${DOMAIN}:80?path=/ws&type=ws#Port80-WS"
-    qrencode -t PNG -s 10 -o qrcodes/port8080.png "vless://${UUID_8080}@${DOMAIN}:8080?path=/ws8080&type=ws#Port8080-WS"
-    qrencode -t PNG -s 10 -o qrcodes/port8443.png "vless://${UUID_8443}@${DOMAIN}:8443?path=/ws8443&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port8443-TLS-WS"
-    qrencode -t PNG -s 10 -o qrcodes/port443.png "vless://${UUID_443}@${DOMAIN}:443?path=/ws443&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port443-TLS-WS"
+    echo "Creating QR codes for all enabled ports..."
+    [ "$ENABLE_80" = "yes" ] && qrencode -t PNG -s 10 -o qrcodes/port${PORT_80}.png "vless://${UUID_80}@${DOMAIN}:${PORT_80}?path=${PATH_80}&type=ws#Port${PORT_80}-WS"
+    [ "$ENABLE_8080" = "yes" ] && qrencode -t PNG -s 10 -o qrcodes/port${PORT_8080}.png "vless://${UUID_8080}@${DOMAIN}:${PORT_8080}?path=${PATH_8080}&type=ws#Port${PORT_8080}-WS"
+    [ "$ENABLE_8443" = "yes" ] && qrencode -t PNG -s 10 -o qrcodes/port${PORT_8443}.png "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?path=${PATH_8443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_8443}-TLS-WS"
+    [ "$ENABLE_443" = "yes" ] && qrencode -t PNG -s 10 -o qrcodes/port${PORT_443}.png "vless://${UUID_443}@${DOMAIN}:${PORT_443}?path=${PATH_443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_443}-TLS-WS"
     
     # Generate ASCII QR codes for terminal display
     echo ""
-    echo -e "${GREEN}Port 443 (Recommended) - Scan with your phone:${NC}"
-    qrencode -t ANSIUTF8 "vless://${UUID_443}@${DOMAIN}:443?path=/ws443&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port443-TLS-WS"
-    echo ""
+    [ "$ENABLE_80" = "yes" ] && {
+        echo -e "${BLUE}━━━ Port ${PORT_80} (HTTP WebSocket) ━━━${NC}"
+        echo "vless://${UUID_80}@${DOMAIN}:${PORT_80}?path=${PATH_80}&type=ws#Port${PORT_80}-WS"
+        echo ""
+        qrencode -t ANSIUTF8 "vless://${UUID_80}@${DOMAIN}:${PORT_80}?path=${PATH_80}&type=ws#Port${PORT_80}-WS"
+        echo ""
+    }
+    
+    [ "$ENABLE_8080" = "yes" ] && {
+        echo -e "${BLUE}━━━ Port ${PORT_8080} (Alternative WebSocket) ━━━${NC}"
+        echo "vless://${UUID_8080}@${DOMAIN}:${PORT_8080}?path=${PATH_8080}&type=ws#Port${PORT_8080}-WS"
+        echo ""
+        qrencode -t ANSIUTF8 "vless://${UUID_8080}@${DOMAIN}:${PORT_8080}?path=${PATH_8080}&type=ws#Port${PORT_8080}-WS"
+        echo ""
+    }
+    
+    [ "$ENABLE_8443" = "yes" ] && {
+        echo -e "${BLUE}━━━ Port ${PORT_8443} (WebSocket + TLS) ━━━${NC}"
+        echo "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?path=${PATH_8443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_8443}-TLS-WS"
+        echo ""
+        qrencode -t ANSIUTF8 "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?path=${PATH_8443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_8443}-TLS-WS"
+        echo ""
+    }
+    
+    [ "$ENABLE_443" = "yes" ] && {
+        echo -e "${GREEN}━━━ Port ${PORT_443} (WebSocket + TLS - RECOMMENDED) ━━━${NC}"
+        echo "vless://${UUID_443}@${DOMAIN}:${PORT_443}?path=${PATH_443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_443}-TLS-WS"
+        echo ""
+        qrencode -t ANSIUTF8 "vless://${UUID_443}@${DOMAIN}:${PORT_443}?path=${PATH_443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_443}-TLS-WS"
+        echo ""
+    }
     
     echo -e "${GREEN}✓ PNG QR codes saved to: qrcodes/${NC}"
     echo "   port80.png, port8080.png, port8443.png, port443.png"
@@ -508,15 +618,44 @@ else
     echo "Installing qrencode..."
     if sudo apt-get install -y qrencode > /dev/null 2>&1; then
         mkdir -p qrcodes
-        qrencode -t PNG -s 10 -o qrcodes/port80.png "vless://${UUID_80}@${DOMAIN}:80?path=/ws&type=ws#Port80-WS"
-        qrencode -t PNG -s 10 -o qrcodes/port8080.png "vless://${UUID_8080}@${DOMAIN}:8080?path=/ws8080&type=ws#Port8080-WS"
-        qrencode -t PNG -s 10 -o qrcodes/port8443.png "vless://${UUID_8443}@${DOMAIN}:8443?path=/ws8443&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port8443-TLS-WS"
-        qrencode -t PNG -s 10 -o qrcodes/port443.png "vless://${UUID_443}@${DOMAIN}:443?path=/ws443&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port443-TLS-WS"
+        qrencode -t PNG -s 10 -o qrcodes/port80.png "vless://${UUID_80}@${DOMAIN}:${PORT_80}?path=${PATH_80}&type=ws#Port${PORT_80}-WS"
+        qrencode -t PNG -s 10 -o qrcodes/port8080.png "vless://${UUID_8080}@${DOMAIN}:${PORT_8080}?path=${PATH_8080}&type=ws#Port${PORT_8080}-WS"
+        qrencode -t PNG -s 10 -o qrcodes/port8443.png "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?path=${PATH_8443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_8443}-TLS-WS"
+        qrencode -t PNG -s 10 -o qrcodes/port443.png "vless://${UUID_443}@${DOMAIN}:${PORT_443}?path=${PATH_443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_443}-TLS-WS"
         
         echo ""
-        echo -e "${GREEN}Port 443 (Recommended) - Scan with your phone:${NC}"
-        qrencode -t ANSIUTF8 "vless://${UUID_443}@${DOMAIN}:443?path=/ws443&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port443-TLS-WS"
-        echo ""
+        if [ "$ENABLE_80" = "yes" ]; then
+            echo -e "${BLUE}━━━ Port ${PORT_80} (HTTP WebSocket) ━━━${NC}"
+            echo "vless://${UUID_80}@${DOMAIN}:${PORT_80}?path=${PATH_80}&type=ws#Port${PORT_80}-WS"
+            echo ""
+            qrencode -t ANSIUTF8 "vless://${UUID_80}@${DOMAIN}:${PORT_80}?path=${PATH_80}&type=ws#Port${PORT_80}-WS"
+            echo ""
+        fi
+        
+        if [ "$ENABLE_8080" = "yes" ]; then
+            echo -e "${BLUE}━━━ Port ${PORT_8080} (Alternative WebSocket) ━━━${NC}"
+            echo "vless://${UUID_8080}@${DOMAIN}:${PORT_8080}?path=${PATH_8080}&type=ws#Port${PORT_8080}-WS"
+            echo ""
+            qrencode -t ANSIUTF8 "vless://${UUID_8080}@${DOMAIN}:${PORT_8080}?path=${PATH_8080}&type=ws#Port${PORT_8080}-WS"
+            echo ""
+        fi
+        
+        if [ "$ENABLE_8443" = "yes" ]; then
+            echo -e "${BLUE}━━━ Port ${PORT_8443} (WebSocket + TLS) ━━━${NC}"
+            echo "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?path=${PATH_8443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_8443}-TLS-WS"
+            echo ""
+            qrencode -t ANSIUTF8 "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?path=${PATH_8443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_8443}-TLS-WS"
+            echo ""
+        fi
+        
+        if [ "$ENABLE_443" = "yes" ]; then
+            echo -e "${GREEN}━━━ Port ${PORT_443} (WebSocket + TLS - RECOMMENDED) ━━━${NC}"
+            echo "vless://${UUID_443}@${DOMAIN}:${PORT_443}?path=${PATH_443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_443}-TLS-WS"
+            echo ""
+            qrencode -t ANSIUTF8 "vless://${UUID_443}@${DOMAIN}:${PORT_443}?path=${PATH_443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_443}-TLS-WS"
+            echo ""
+        fi
+        
         echo -e "${GREEN}✓ QR codes generated in: qrcodes/${NC}"
     else
         echo "Could not install qrencode. You can:"
@@ -526,7 +665,7 @@ else
     echo ""
 fi
 
-═══════════════════════════════════════════════════════════════
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
 📲 CLIENT APPLICATIONS:
 
