@@ -24,6 +24,9 @@ RUN XRAY_VERSION=$(curl -s https://api.github.com/repos/XTLS/Xray-core/releases/
 # Copy Xray configuration files
 COPY xray-configs/ /etc/xray/
 
+# Copy certificates (required when not using volume mounts)
+COPY certs/ /certs/
+
 # Create directories for logs and certificates
 RUN mkdir -p /etc/xray /certs /var/log/xray
 
