@@ -145,6 +145,26 @@ PATH_8080=/ws${PORT_8080}
 PATH_443=/ws${PORT_443}
 PATH_8443=/ws${PORT_8443}
 
+validate_port() {
+    [[ "$1" =~ ^[0-9]+$ ]] && [ "$1" -ge 1 ] && [ "$1" -le 65535 ]
+}
+
+for p in "$PORT_80" "$PORT_8080" "$PORT_443" "$PORT_8443"; do
+    if ! validate_port "$p"; then
+        echo -e "${RED}❌ Invalid port: $p (must be 1-65535)${NC}"
+        exit 1
+    fi
+done
+
+declare -A PORT_SEEN
+for p in "$PORT_80" "$PORT_8080" "$PORT_443" "$PORT_8443"; do
+    if [ -n "${PORT_SEEN[$p]}" ]; then
+        echo -e "${RED}❌ Duplicate port detected: $p. Use unique ports for WS and WS+TLS.${NC}"
+        exit 1
+    fi
+    PORT_SEEN[$p]=1
+done
+
 echo -e "  ${GREEN}✓ WS ports: ${PORT_80} (${PATH_80}), ${PORT_8080} (${PATH_8080})${NC}"
 echo -e "  ${GREEN}✓ WS+TLS ports: ${PORT_443} (${PATH_443}), ${PORT_8443} (${PATH_8443})${NC}"
 echo ""
