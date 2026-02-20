@@ -116,7 +116,7 @@ echo ""
 
 # Port Configuration
 echo -e "${YELLOW}━━━ Port Configuration ━━━${NC}"
-echo "Enter ports as comma-separated values. Paths are auto-generated."
+echo "Enter one or two ports (comma-separated). Paths are auto-generated."
 echo ""
 
 read -p "WS (no TLS) ports [default: 80,8080]: " WS_PORTS_INPUT
@@ -131,42 +131,75 @@ IFS=',' read -r WS_PORT_1 WS_PORT_2 <<< "$WS_PORTS_INPUT"
 IFS=',' read -r TLS_PORT_1 TLS_PORT_2 <<< "$TLS_PORTS_INPUT"
 
 PORT_80=${WS_PORT_1:-80}
-PORT_8080=${WS_PORT_2:-8080}
+PORT_8080=${WS_PORT_2:-}
 PORT_443=${TLS_PORT_1:-443}
-PORT_8443=${TLS_PORT_2:-8443}
+PORT_8443=${TLS_PORT_2:-}
 
 ENABLE_80=yes
-ENABLE_8080=yes
+ENABLE_8080=no
 ENABLE_443=yes
-ENABLE_8443=yes
+ENABLE_8443=no
+
+[ -n "$PORT_8080" ] && ENABLE_8080=yes
+[ -n "$PORT_8443" ] && ENABLE_8443=yes
 
 PATH_80=/ws
-PATH_8080=/ws${PORT_8080}
+[ "$ENABLE_8080" = "yes" ] && PATH_8080=/ws${PORT_8080}
 PATH_443=/ws${PORT_443}
-PATH_8443=/ws${PORT_8443}
+[ "$ENABLE_8443" = "yes" ] && PATH_8443=/ws${PORT_8443}
 
 validate_port() {
     [[ "$1" =~ ^[0-9]+$ ]] && [ "$1" -ge 1 ] && [ "$1" -le 65535 ]
 }
 
-for p in "$PORT_80" "$PORT_8080" "$PORT_443" "$PORT_8443"; do
+for p in "$PORT_80" "$PORT_443"; do
     if ! validate_port "$p"; then
         echo -e "${RED}❌ Invalid port: $p (must be 1-65535)${NC}"
         exit 1
     fi
 done
+if [ "$ENABLE_8080" = "yes" ] && ! validate_port "$PORT_8080"; then
+    echo -e "${RED}❌ Invalid port: $PORT_8080 (must be 1-65535)${NC}"
+    exit 1
+fi
+if [ "$ENABLE_8443" = "yes" ] && ! validate_port "$PORT_8443"; then
+    echo -e "${RED}❌ Invalid port: $PORT_8443 (must be 1-65535)${NC}"
+    exit 1
+fi
 
 declare -A PORT_SEEN
-for p in "$PORT_80" "$PORT_8080" "$PORT_443" "$PORT_8443"; do
+for p in "$PORT_80" "$PORT_443"; do
     if [ -n "${PORT_SEEN[$p]}" ]; then
         echo -e "${RED}❌ Duplicate port detected: $p. Use unique ports for WS and WS+TLS.${NC}"
         exit 1
     fi
     PORT_SEEN[$p]=1
 done
+if [ "$ENABLE_8080" = "yes" ]; then
+    if [ -n "${PORT_SEEN[$PORT_8080]}" ]; then
+        echo -e "${RED}❌ Duplicate port detected: $PORT_8080. Use unique ports for WS and WS+TLS.${NC}"
+        exit 1
+    fi
+    PORT_SEEN[$PORT_8080]=1
+fi
+if [ "$ENABLE_8443" = "yes" ]; then
+    if [ -n "${PORT_SEEN[$PORT_8443]}" ]; then
+        echo -e "${RED}❌ Duplicate port detected: $PORT_8443. Use unique ports for WS and WS+TLS.${NC}"
+        exit 1
+    fi
+    PORT_SEEN[$PORT_8443]=1
+fi
 
-echo -e "  ${GREEN}✓ WS ports: ${PORT_80} (${PATH_80}), ${PORT_8080} (${PATH_8080})${NC}"
-echo -e "  ${GREEN}✓ WS+TLS ports: ${PORT_443} (${PATH_443}), ${PORT_8443} (${PATH_8443})${NC}"
+if [ "$ENABLE_8080" = "yes" ]; then
+    echo -e "  ${GREEN}✓ WS ports: ${PORT_80} (${PATH_80}), ${PORT_8080} (${PATH_8080})${NC}"
+else
+    echo -e "  ${GREEN}✓ WS ports: ${PORT_80} (${PATH_80})${NC}"
+fi
+if [ "$ENABLE_8443" = "yes" ]; then
+    echo -e "  ${GREEN}✓ WS+TLS ports: ${PORT_443} (${PATH_443}), ${PORT_8443} (${PATH_8443})${NC}"
+else
+    echo -e "  ${GREEN}✓ WS+TLS ports: ${PORT_443} (${PATH_443})${NC}"
+fi
 echo ""
 
 # Certificate type selection
@@ -249,17 +282,17 @@ cat > .env << EOF
 DOMAIN=$DOMAIN
 LETSENCRYPT_EMAIL=$EMAIL
 PORT_80=$PORT_80
+PORT_443=$PORT_443
 PORT_8080=$PORT_8080
 PORT_8443=$PORT_8443
-PORT_443=$PORT_443
 UUID_PORT_80=$UUID_80
 UUID_PORT_8080=$UUID_8080
 UUID_PORT_8443=$UUID_8443
 UUID_PORT_443=$UUID_443
 WS_PATH_80=$PATH_80
+WS_PATH_443=$PATH_443
 WS_PATH_8080=$PATH_8080
 WS_PATH_8443=$PATH_8443
-WS_PATH_443=$PATH_443
 LOG_LEVEL=info
 TZ=UTC
 EOF
@@ -278,13 +311,42 @@ sed -i "s|87654321-4321-4321-4321-210987654321|$UUID_8080|g" xray-configs/config
 sed -i "s|11111111-2222-3333-4444-555555555555|$UUID_8443|g" xray-configs/config.json
 sed -i "s|99999999-8888-7777-6666-555555555555|$UUID_443|g" xray-configs/config.json
 sed -i "s|\"port\": 80|\"port\": $PORT_80|g" xray-configs/config.json
-sed -i "s|\"port\": 8080|\"port\": $PORT_8080|g" xray-configs/config.json
-sed -i "s|\"port\": 8443|\"port\": $PORT_8443|g" xray-configs/config.json
 sed -i "s|\"port\": 443|\"port\": $PORT_443|g" xray-configs/config.json
 sed -i "s|\"path\": \"/ws\"|\"path\": \"$PATH_80\"|g" xray-configs/config.json
-sed -i "s|\"path\": \"/ws8080\"|\"path\": \"$PATH_8080\"|g" xray-configs/config.json
-sed -i "s|\"path\": \"/ws8443\"|\"path\": \"$PATH_8443\"|g" xray-configs/config.json
 sed -i "s|\"path\": \"/ws443\"|\"path\": \"$PATH_443\"|g" xray-configs/config.json
+
+if [ "$ENABLE_8080" = "yes" ]; then
+    sed -i "s|\"port\": 8080|\"port\": $PORT_8080|g" xray-configs/config.json
+    sed -i "s|\"path\": \"/ws8080\"|\"path\": \"$PATH_8080\"|g" xray-configs/config.json
+fi
+
+if [ "$ENABLE_8443" = "yes" ]; then
+    sed -i "s|\"port\": 8443|\"port\": $PORT_8443|g" xray-configs/config.json
+    sed -i "s|\"path\": \"/ws8443\"|\"path\": \"$PATH_8443\"|g" xray-configs/config.json
+fi
+
+python3 - << 'PY'
+import json
+
+path = 'xray-configs/config.json'
+with open(path, 'r', encoding='utf-8') as f:
+    data = json.load(f)
+
+inbounds = data.get('inbounds', [])
+filtered = []
+for ib in inbounds:
+    tag = ib.get('tag', '')
+    if tag == 'alt-ws' and "${ENABLE_8080}" != 'yes':
+        continue
+    if tag == 'tls-ws-alt' and "${ENABLE_8443}" != 'yes':
+        continue
+    filtered.append(ib)
+
+data['inbounds'] = filtered
+
+with open(path, 'w', encoding='utf-8') as f:
+    json.dump(data, f, ensure_ascii=False, indent=2)
+PY
 
 echo -e "${GREEN}✓ Configuration files updated${NC}"
 echo ""
