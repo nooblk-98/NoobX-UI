@@ -667,7 +667,11 @@ if command -v qrencode &> /dev/null; then
     }
     
     echo -e "${GREEN}✓ PNG QR codes saved to: qrcodes/${NC}"
-    echo "   port${PORT_80}.png, port${PORT_8080}.png, port${PORT_8443}.png, port${PORT_443}.png"
+    PNG_LIST="port${PORT_80}.png"
+    [ "$ENABLE_8080" = "yes" ] && PNG_LIST+=" , port${PORT_8080}.png"
+    [ "$ENABLE_8443" = "yes" ] && PNG_LIST+=" , port${PORT_8443}.png"
+    PNG_LIST+=" , port${PORT_443}.png"
+    echo "   ${PNG_LIST}"
     echo ""
 else
     echo "2️⃣ QR Code Generation:"
