@@ -116,71 +116,37 @@ echo ""
 
 # Port Configuration
 echo -e "${YELLOW}━━━ Port Configuration ━━━${NC}"
-echo "Configure which ports to use for Xray server:"
+echo "Enter ports as comma-separated values. Paths are auto-generated."
 echo ""
 
-# Port 80 (WS)
-read -p "Enable Port 80 (HTTP WebSocket)? (yes/no) [default: yes]: " ENABLE_80
-ENABLE_80=${ENABLE_80:-yes}
-if [ "$ENABLE_80" = "yes" ]; then
-    read -p "  Custom port (press Enter for 80): " PORT_80
-    PORT_80=${PORT_80:-80}
-    read -p "  Custom path (press Enter for /ws): " PATH_80
-    PATH_80=${PATH_80:-/ws}
-    echo -e "  ${GREEN}✓ Port $PORT_80 enabled with path $PATH_80${NC}"
-else
-    PORT_80=80
-    PATH_80=/ws
-    echo -e "  ${YELLOW}⊘ Port 80 disabled${NC}"
-fi
-echo ""
+read -p "WS (no TLS) ports [default: 80,8080]: " WS_PORTS_INPUT
+WS_PORTS_INPUT=${WS_PORTS_INPUT:-80,8080}
+read -p "WS + TLS ports [default: 443,8443]: " TLS_PORTS_INPUT
+TLS_PORTS_INPUT=${TLS_PORTS_INPUT:-443,8443}
 
-# Port 8080 (WS)
-read -p "Enable Port 8080 (Alternative WebSocket)? (yes/no) [default: yes]: " ENABLE_8080
-ENABLE_8080=${ENABLE_8080:-yes}
-if [ "$ENABLE_8080" = "yes" ]; then
-    read -p "  Custom port (press Enter for 8080): " PORT_8080
-    PORT_8080=${PORT_8080:-8080}
-    read -p "  Custom path (press Enter for /ws8080): " PATH_8080
-    PATH_8080=${PATH_8080:-/ws8080}
-    echo -e "  ${GREEN}✓ Port $PORT_8080 enabled with path $PATH_8080${NC}"
-else
-    PORT_8080=8080
-    PATH_8080=/ws8080
-    echo -e "  ${YELLOW}⊘ Port 8080 disabled${NC}"
-fi
-echo ""
+WS_PORTS_INPUT=$(echo "$WS_PORTS_INPUT" | tr -d ' ')
+TLS_PORTS_INPUT=$(echo "$TLS_PORTS_INPUT" | tr -d ' ')
 
-# Port 8443 (TLS+WS)
-read -p "Enable Port 8443 (WebSocket + TLS)? (yes/no) [default: yes]: " ENABLE_8443
-ENABLE_8443=${ENABLE_8443:-yes}
-if [ "$ENABLE_8443" = "yes" ]; then
-    read -p "  Custom port (press Enter for 8443): " PORT_8443
-    PORT_8443=${PORT_8443:-8443}
-    read -p "  Custom path (press Enter for /ws8443): " PATH_8443
-    PATH_8443=${PATH_8443:-/ws8443}
-    echo -e "  ${GREEN}✓ Port $PORT_8443 enabled with path $PATH_8443 (TLS)${NC}"
-else
-    PORT_8443=8443
-    PATH_8443=/ws8443
-    echo -e "  ${YELLOW}⊘ Port 8443 disabled${NC}"
-fi
-echo ""
+IFS=',' read -r WS_PORT_1 WS_PORT_2 <<< "$WS_PORTS_INPUT"
+IFS=',' read -r TLS_PORT_1 TLS_PORT_2 <<< "$TLS_PORTS_INPUT"
 
-# Port 443 (TLS+WS)
-read -p "Enable Port 443 (WebSocket + TLS - RECOMMENDED)? (yes/no) [default: yes]: " ENABLE_443
-ENABLE_443=${ENABLE_443:-yes}
-if [ "$ENABLE_443" = "yes" ]; then
-    read -p "  Custom port (press Enter for 443): " PORT_443
-    PORT_443=${PORT_443:-443}
-    read -p "  Custom path (press Enter for /ws443): " PATH_443
-    PATH_443=${PATH_443:-/ws443}
-    echo -e "  ${GREEN}✓ Port $PORT_443 enabled with path $PATH_443 (TLS)${NC}"
-else
-    PORT_443=443
-    PATH_443=/ws443
-    echo -e "  ${YELLOW}⊘ Port 443 disabled${NC}"
-fi
+PORT_80=${WS_PORT_1:-80}
+PORT_8080=${WS_PORT_2:-8080}
+PORT_443=${TLS_PORT_1:-443}
+PORT_8443=${TLS_PORT_2:-8443}
+
+ENABLE_80=yes
+ENABLE_8080=yes
+ENABLE_443=yes
+ENABLE_8443=yes
+
+PATH_80=/ws
+PATH_8080=/ws${PORT_8080}
+PATH_443=/ws${PORT_443}
+PATH_8443=/ws${PORT_8443}
+
+echo -e "  ${GREEN}✓ WS ports: ${PORT_80} (${PATH_80}), ${PORT_8080} (${PATH_8080})${NC}"
+echo -e "  ${GREEN}✓ WS+TLS ports: ${PORT_443} (${PATH_443}), ${PORT_8443} (${PATH_8443})${NC}"
 echo ""
 
 # Certificate type selection
@@ -199,11 +165,8 @@ echo -e "${YELLOW}Summary:${NC}"
 echo "  Domain: $DOMAIN"
 echo "  Email: $EMAIL"
 echo "  Certificate: $([ "$CERT_TYPE" = "1" ] && echo "Let's Encrypt" || echo "Self-signed")"
-echo "  Ports enabled:"
-[ "$ENABLE_80" = "yes" ] && echo "    - Port $PORT_80 (WS) path: $PATH_80"
-[ "$ENABLE_8080" = "yes" ] && echo "    - Port $PORT_8080 (WS) path: $PATH_8080"
-[ "$ENABLE_8443" = "yes" ] && echo "    - Port $PORT_8443 (TLS+WS) path: $PATH_8443"
-[ "$ENABLE_443" = "yes" ] && echo "    - Port $PORT_443 (TLS+WS) path: $PATH_443"
+echo "  WS ports: $PORT_80 ($PATH_80), $PORT_8080 ($PATH_8080)"
+echo "  WS+TLS ports: $PORT_443 ($PATH_443), $PORT_8443 ($PATH_8443)"
 echo ""
 read -p "Continue with these settings? (yes/no): " CONFIRM
 if [ "$CONFIRM" != "yes" ]; then
@@ -265,14 +228,18 @@ cat > .env << EOF
 # Xray Server Configuration
 DOMAIN=$DOMAIN
 LETSENCRYPT_EMAIL=$EMAIL
+PORT_80=$PORT_80
+PORT_8080=$PORT_8080
+PORT_8443=$PORT_8443
+PORT_443=$PORT_443
 UUID_PORT_80=$UUID_80
 UUID_PORT_8080=$UUID_8080
 UUID_PORT_8443=$UUID_8443
 UUID_PORT_443=$UUID_443
-WS_PATH_80=/ws
-WS_PATH_8080=/ws8080
-WS_PATH_8443=/ws8443
-WS_PATH_443=/ws443
+WS_PATH_80=$PATH_80
+WS_PATH_8080=$PATH_8080
+WS_PATH_8443=$PATH_8443
+WS_PATH_443=$PATH_443
 LOG_LEVEL=info
 TZ=UTC
 EOF
@@ -290,6 +257,14 @@ sed -i "s|12345678-1234-1234-1234-123456789012|$UUID_80|g" xray-configs/config.j
 sed -i "s|87654321-4321-4321-4321-210987654321|$UUID_8080|g" xray-configs/config.json
 sed -i "s|11111111-2222-3333-4444-555555555555|$UUID_8443|g" xray-configs/config.json
 sed -i "s|99999999-8888-7777-6666-555555555555|$UUID_443|g" xray-configs/config.json
+sed -i "s|\"port\": 80|\"port\": $PORT_80|g" xray-configs/config.json
+sed -i "s|\"port\": 8080|\"port\": $PORT_8080|g" xray-configs/config.json
+sed -i "s|\"port\": 8443|\"port\": $PORT_8443|g" xray-configs/config.json
+sed -i "s|\"port\": 443|\"port\": $PORT_443|g" xray-configs/config.json
+sed -i "s|\"path\": \"/ws\"|\"path\": \"$PATH_80\"|g" xray-configs/config.json
+sed -i "s|\"path\": \"/ws8080\"|\"path\": \"$PATH_8080\"|g" xray-configs/config.json
+sed -i "s|\"path\": \"/ws8443\"|\"path\": \"$PATH_8443\"|g" xray-configs/config.json
+sed -i "s|\"path\": \"/ws443\"|\"path\": \"$PATH_443\"|g" xray-configs/config.json
 
 echo -e "${GREEN}✓ Configuration files updated${NC}"
 echo ""
@@ -610,7 +585,7 @@ if command -v qrencode &> /dev/null; then
     }
     
     echo -e "${GREEN}✓ PNG QR codes saved to: qrcodes/${NC}"
-    echo "   port80.png, port8080.png, port8443.png, port443.png"
+    echo "   port${PORT_80}.png, port${PORT_8080}.png, port${PORT_8443}.png, port${PORT_443}.png"
     echo ""
 else
     echo "2️⃣ QR Code Generation:"
@@ -618,10 +593,10 @@ else
     echo "Installing qrencode..."
     if sudo apt-get install -y qrencode > /dev/null 2>&1; then
         mkdir -p qrcodes
-        qrencode -t PNG -s 10 -o qrcodes/port80.png "vless://${UUID_80}@${DOMAIN}:${PORT_80}?path=${PATH_80}&type=ws#Port${PORT_80}-WS"
-        qrencode -t PNG -s 10 -o qrcodes/port8080.png "vless://${UUID_8080}@${DOMAIN}:${PORT_8080}?path=${PATH_8080}&type=ws#Port${PORT_8080}-WS"
-        qrencode -t PNG -s 10 -o qrcodes/port8443.png "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?path=${PATH_8443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_8443}-TLS-WS"
-        qrencode -t PNG -s 10 -o qrcodes/port443.png "vless://${UUID_443}@${DOMAIN}:${PORT_443}?path=${PATH_443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_443}-TLS-WS"
+        qrencode -t PNG -s 10 -o qrcodes/port${PORT_80}.png "vless://${UUID_80}@${DOMAIN}:${PORT_80}?path=${PATH_80}&type=ws#Port${PORT_80}-WS"
+        qrencode -t PNG -s 10 -o qrcodes/port${PORT_8080}.png "vless://${UUID_8080}@${DOMAIN}:${PORT_8080}?path=${PATH_8080}&type=ws#Port${PORT_8080}-WS"
+        qrencode -t PNG -s 10 -o qrcodes/port${PORT_8443}.png "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?path=${PATH_8443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_8443}-TLS-WS"
+        qrencode -t PNG -s 10 -o qrcodes/port${PORT_443}.png "vless://${UUID_443}@${DOMAIN}:${PORT_443}?path=${PATH_443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_443}-TLS-WS"
         
         echo ""
         if [ "$ENABLE_80" = "yes" ]; then
@@ -667,6 +642,7 @@ fi
 
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
+cat > client-configs.txt << EOF
 📲 CLIENT APPLICATIONS:
 
 Compatible with:
