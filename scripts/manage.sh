@@ -217,6 +217,12 @@ restart_server() {
     echo -e "${GREEN}✓ Restarted${NC}"
 }
 
+show_logs() {
+    cd "$ROOT_DIR"
+    echo -e "${BLUE}Showing last 200 lines (press Ctrl+C to stop)...${NC}"
+    docker logs -n 200 -f xray-server
+}
+
 while true; do
     clear
     echo -e "${BLUE}XRAY SERVER MENU${NC}"
@@ -228,7 +234,8 @@ while true; do
     echo "6) Add config"
     echo "7) Remove config"
     echo "8) Restart"
-    echo "9) Exit"
+    echo "9) Show logs"
+    echo "10) Exit"
     echo ""
     read -p "Choose an option: " CHOICE
     case "$CHOICE" in
@@ -240,7 +247,8 @@ while true; do
         6) CONFIG_FILE="$CONFIG_FILE" add_config; pause ;;
         7) CONFIG_FILE="$CONFIG_FILE" remove_config; pause ;;
         8) restart_server; pause ;;
-        9) exit 0 ;;
+        9) show_logs ;;
+        10) exit 0 ;;
         *) echo -e "${RED}Invalid choice${NC}"; pause ;;
     esac
  done
