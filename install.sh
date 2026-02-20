@@ -45,29 +45,46 @@ fi
 
 echo -e "${GREEN}✓ Linux OS detected${NC}"
 
-# Check Docker
+# Check and install Docker
 if ! command -v docker &> /dev/null; then
-    echo -e "${RED}❌ Docker is not installed${NC}"
-    echo "Install Docker: https://docs.docker.com/get-docker/"
-    exit 1
+    echo -e "${YELLOW}Installing Docker...${NC}"
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sudo sh get-docker.sh
+    rm get-docker.sh
+    
+    # Add current user to docker group
+    sudo usermod -aG docker $USER
+    newgrp docker
+    
+    echo -e "${GREEN}✓ Docker installed: $(docker --version)${NC}"
+else
+    echo -e "${GREEN}✓ Docker installed: $(docker --version)${NC}"
 fi
-echo -e "${GREEN}✓ Docker installed: $(docker --version)${NC}"
 
-# Check Docker Compose
+# Check and install Docker Compose
 if ! command -v docker-compose &> /dev/null; then
-    echo -e "${RED}❌ Docker Compose is not installed${NC}"
-    echo "Install Docker Compose: https://docs.docker.com/compose/install/"
-    exit 1
+    echo -e "${YELLOW}Installing Docker Compose...${NC}"
+    sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
+    echo -e "${GREEN}✓ Docker Compose installed: $(docker-compose --version)${NC}"
+else
+    echo -e "${GREEN}✓ Docker Compose installed: $(docker-compose --version)${NC}"
 fi
-echo -e "${GREEN}✓ Docker Compose installed: $(docker-compose --version)${NC}"
 
 # Check if Docker daemon is running
 if ! docker ps &> /dev/null; then
-    echo -e "${RED}❌ Docker daemon is not running${NC}"
-    echo "Start Docker service first"
+    echo -e "${YELLOW}Starting Docker daemon...${NC}"
+    sudo systemctl start docker
+    sudo systemctl enable docker
+    sleep 2
+fi
+
+if docker ps &> /dev/null; then
+    echo -e "${GREEN}✓ Docker daemon is running${NC}"
+else
+    echo -e "${RED}❌ Docker daemon failed to start${NC}"
     exit 1
 fi
-echo -e "${GREEN}✓ Docker daemon is running${NC}"
 
 echo ""
 
