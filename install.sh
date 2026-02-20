@@ -116,12 +116,12 @@ echo ""
 
 # Port Configuration
 echo -e "${YELLOW}━━━ Port Configuration ━━━${NC}"
-echo "Enter one or two ports (comma-separated). Paths are auto-generated."
+echo "Enter one or two ports (comma-separated). Leave WS empty to disable WS."
 echo ""
 
-read -p "WS (no TLS) ports [default: 80,8080]: " WS_PORTS_INPUT
-WS_PORTS_INPUT=${WS_PORTS_INPUT:-80,8080}
-read -p "WS + TLS ports [default: 443,8443]: " TLS_PORTS_INPUT
+read -p "WS (no TLS) ports [default: none]: " WS_PORTS_INPUT
+WS_PORTS_INPUT=${WS_PORTS_INPUT:-}
+read -p "TCP + TLS (Vision) ports [default: 443,8443]: " TLS_PORTS_INPUT
 TLS_PORTS_INPUT=${TLS_PORTS_INPUT:-443,8443}
 
 WS_PORTS_INPUT=$(echo "$WS_PORTS_INPUT" | tr -d ' ')
@@ -130,34 +130,37 @@ TLS_PORTS_INPUT=$(echo "$TLS_PORTS_INPUT" | tr -d ' ')
 IFS=',' read -r WS_PORT_1 WS_PORT_2 <<< "$WS_PORTS_INPUT"
 IFS=',' read -r TLS_PORT_1 TLS_PORT_2 <<< "$TLS_PORTS_INPUT"
 
-PORT_80=${WS_PORT_1:-80}
+PORT_80=${WS_PORT_1:-}
 PORT_8080=${WS_PORT_2:-}
 PORT_443=${TLS_PORT_1:-443}
 PORT_8443=${TLS_PORT_2:-}
 
-ENABLE_80=yes
+ENABLE_80=no
 ENABLE_8080=no
 ENABLE_443=yes
 ENABLE_8443=no
 
+[ -n "$PORT_80" ] && ENABLE_80=yes
 [ -n "$PORT_8080" ] && ENABLE_8080=yes
 [ -n "$PORT_8443" ] && ENABLE_8443=yes
 
-PATH_80=/ws
+[ "$ENABLE_80" = "yes" ] && PATH_80=/ws
 [ "$ENABLE_8080" = "yes" ] && PATH_8080=/ws${PORT_8080}
-PATH_443=/ws${PORT_443}
-[ "$ENABLE_8443" = "yes" ] && PATH_8443=/ws${PORT_8443}
+PATH_443=
+PATH_8443=
 
 validate_port() {
     [[ "$1" =~ ^[0-9]+$ ]] && [ "$1" -ge 1 ] && [ "$1" -le 65535 ]
 }
 
-for p in "$PORT_80" "$PORT_443"; do
-    if ! validate_port "$p"; then
-        echo -e "${RED}❌ Invalid port: $p (must be 1-65535)${NC}"
-        exit 1
-    fi
-done
+if [ "$ENABLE_80" = "yes" ] && ! validate_port "$PORT_80"; then
+    echo -e "${RED}❌ Invalid port: $PORT_80 (must be 1-65535)${NC}"
+    exit 1
+fi
+if ! validate_port "$PORT_443"; then
+    echo -e "${RED}❌ Invalid port: $PORT_443 (must be 1-65535)${NC}"
+    exit 1
+fi
 if [ "$ENABLE_8080" = "yes" ] && ! validate_port "$PORT_8080"; then
     echo -e "${RED}❌ Invalid port: $PORT_8080 (must be 1-65535)${NC}"
     exit 1
@@ -168,13 +171,18 @@ if [ "$ENABLE_8443" = "yes" ] && ! validate_port "$PORT_8443"; then
 fi
 
 declare -A PORT_SEEN
-for p in "$PORT_80" "$PORT_443"; do
-    if [ -n "${PORT_SEEN[$p]}" ]; then
-        echo -e "${RED}❌ Duplicate port detected: $p. Use unique ports for WS and WS+TLS.${NC}"
+if [ "$ENABLE_80" = "yes" ]; then
+    if [ -n "${PORT_SEEN[$PORT_80]}" ]; then
+        echo -e "${RED}❌ Duplicate port detected: $PORT_80. Use unique ports for WS and TCP+TLS.${NC}"
         exit 1
     fi
-    PORT_SEEN[$p]=1
-done
+    PORT_SEEN[$PORT_80]=1
+fi
+if [ -n "${PORT_SEEN[$PORT_443]}" ]; then
+    echo -e "${RED}❌ Duplicate port detected: $PORT_443. Use unique ports for WS and TCP+TLS.${NC}"
+    exit 1
+fi
+PORT_SEEN[$PORT_443]=1
 if [ "$ENABLE_8080" = "yes" ]; then
     if [ -n "${PORT_SEEN[$PORT_8080]}" ]; then
         echo -e "${RED}❌ Duplicate port detected: $PORT_8080. Use unique ports for WS and WS+TLS.${NC}"
@@ -190,15 +198,19 @@ if [ "$ENABLE_8443" = "yes" ]; then
     PORT_SEEN[$PORT_8443]=1
 fi
 
-if [ "$ENABLE_8080" = "yes" ]; then
+if [ "$ENABLE_80" = "yes" ] && [ "$ENABLE_8080" = "yes" ]; then
     echo -e "  ${GREEN}✓ WS ports: ${PORT_80} (${PATH_80}), ${PORT_8080} (${PATH_8080})${NC}"
-else
+elif [ "$ENABLE_80" = "yes" ]; then
     echo -e "  ${GREEN}✓ WS ports: ${PORT_80} (${PATH_80})${NC}"
+elif [ "$ENABLE_8080" = "yes" ]; then
+    echo -e "  ${GREEN}✓ WS ports: ${PORT_8080} (${PATH_8080})${NC}"
+else
+    echo -e "  ${YELLOW}⊘ WS ports disabled${NC}"
 fi
 if [ "$ENABLE_8443" = "yes" ]; then
-    echo -e "  ${GREEN}✓ WS+TLS ports: ${PORT_443} (${PATH_443}), ${PORT_8443} (${PATH_8443})${NC}"
+    echo -e "  ${GREEN}✓ TCP+TLS ports: ${PORT_443}, ${PORT_8443}${NC}"
 else
-    echo -e "  ${GREEN}✓ WS+TLS ports: ${PORT_443} (${PATH_443})${NC}"
+    echo -e "  ${GREEN}✓ TCP+TLS ports: ${PORT_443}${NC}"
 fi
 echo ""
 
@@ -212,15 +224,19 @@ echo -e "${YELLOW}Summary:${NC}"
 echo "  Domain: $DOMAIN"
 echo "  Email: $EMAIL"
 echo "  Certificate: Self-signed"
-if [ "$ENABLE_8080" = "yes" ]; then
+if [ "$ENABLE_80" = "yes" ] && [ "$ENABLE_8080" = "yes" ]; then
     echo "  WS ports: $PORT_80 ($PATH_80), $PORT_8080 ($PATH_8080)"
-else
+elif [ "$ENABLE_80" = "yes" ]; then
     echo "  WS ports: $PORT_80 ($PATH_80)"
+elif [ "$ENABLE_8080" = "yes" ]; then
+    echo "  WS ports: $PORT_8080 ($PATH_8080)"
+else
+    echo "  WS ports: disabled"
 fi
 if [ "$ENABLE_8443" = "yes" ]; then
-    echo "  WS+TLS ports: $PORT_443 ($PATH_443), $PORT_8443 ($PATH_8443)"
+    echo "  TCP+TLS ports: $PORT_443, $PORT_8443"
 else
-    echo "  WS+TLS ports: $PORT_443 ($PATH_443)"
+    echo "  TCP+TLS ports: $PORT_443"
 fi
 echo ""
 read -p "Continue with these settings? (yes/no): " CONFIRM
@@ -253,14 +269,16 @@ UUID_8443=$(generate_uuid)
 UUID_443=$(generate_uuid)
 
 echo "Generated UUIDs:"
-echo -e "  Port ${PORT_80}:   ${GREEN}$UUID_80${NC}"
+if [ "$ENABLE_80" = "yes" ]; then
+    echo -e "  Port ${PORT_80}:   ${GREEN}$UUID_80${NC}"
+fi
 if [ "$ENABLE_8080" = "yes" ]; then
     echo -e "  Port ${PORT_8080}: ${GREEN}$UUID_8080${NC}"
 fi
+echo -e "  Port ${PORT_443}:  ${GREEN}$UUID_443${NC}"
 if [ "$ENABLE_8443" = "yes" ]; then
     echo -e "  Port ${PORT_8443}: ${GREEN}$UUID_8443${NC}"
 fi
-echo -e "  Port ${PORT_443}:  ${GREEN}$UUID_443${NC}"
 echo ""
 
 # ============================================================================
@@ -296,8 +314,8 @@ UUID_PORT_8080=$UUID_8080
 UUID_PORT_8443=$UUID_8443
 UUID_PORT_443=$UUID_443
 WS_PATH_80=$PATH_80
-WS_PATH_443=$PATH_443
 WS_PATH_8080=$PATH_8080
+WS_PATH_443=$PATH_443
 WS_PATH_8443=$PATH_8443
 LOG_LEVEL=info
 TZ=UTC
@@ -311,15 +329,16 @@ echo -e "${GREEN}✓ Created .env file${NC}"
 echo "Updating Xray configuration files..."
 
 # Update main config.json
-sed -i "s|\"Host\": \"example.com\"|\"Host\": \"$DOMAIN\"|g" xray-configs/config.json
+sed -i "s|\"host\": \"example.com\"|\"host\": \"$DOMAIN\"|g" xray-configs/config.json
 sed -i "s|12345678-1234-1234-1234-123456789012|$UUID_80|g" xray-configs/config.json
 sed -i "s|87654321-4321-4321-4321-210987654321|$UUID_8080|g" xray-configs/config.json
 sed -i "s|11111111-2222-3333-4444-555555555555|$UUID_8443|g" xray-configs/config.json
 sed -i "s|99999999-8888-7777-6666-555555555555|$UUID_443|g" xray-configs/config.json
-sed -i "s|\"port\": 80|\"port\": $PORT_80|g" xray-configs/config.json
+if [ "$ENABLE_80" = "yes" ]; then
+    sed -i "s|\"port\": 80|\"port\": $PORT_80|g" xray-configs/config.json
+    sed -i "s|\"path\": \"/ws\"|\"path\": \"$PATH_80\"|g" xray-configs/config.json
+fi
 sed -i "s|\"port\": 443|\"port\": $PORT_443|g" xray-configs/config.json
-sed -i "s|\"path\": \"/ws\"|\"path\": \"$PATH_80\"|g" xray-configs/config.json
-sed -i "s|\"path\": \"/ws443\"|\"path\": \"$PATH_443\"|g" xray-configs/config.json
 
 if [ "$ENABLE_8080" = "yes" ]; then
     sed -i "s|\"port\": 8080|\"port\": $PORT_8080|g" xray-configs/config.json
@@ -328,7 +347,6 @@ fi
 
 if [ "$ENABLE_8443" = "yes" ]; then
     sed -i "s|\"port\": 8443|\"port\": $PORT_8443|g" xray-configs/config.json
-    sed -i "s|\"path\": \"/ws8443\"|\"path\": \"$PATH_8443\"|g" xray-configs/config.json
 fi
 
 python3 - << 'PY'
@@ -342,6 +360,8 @@ inbounds = data.get('inbounds', [])
 filtered = []
 for ib in inbounds:
     tag = ib.get('tag', '')
+    if tag == 'http-ws' and "${ENABLE_80}" != 'yes':
+        continue
     if tag == 'alt-ws' and "${ENABLE_8080}" != 'yes':
         continue
     if tag == 'tls-ws-alt' and "${ENABLE_8443}" != 'yes':
@@ -573,15 +593,15 @@ if [ "$ENABLE_8080" = "yes" ]; then
     echo ""
 fi
 
-if [ "$ENABLE_8443" = "yes" ]; then
-    echo -e "${YELLOW}━━━ Port ${PORT_8443} (WebSocket + TLS) ━━━${NC}"
-    echo "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?path=${PATH_8443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_8443}-TLS-WS"
+if [ "$ENABLE_443" = "yes" ]; then
+    echo -e "${GREEN}━━━ Port ${PORT_443} (TCP + TLS + Vision - RECOMMENDED) ━━━${NC}"
+    echo "vless://${UUID_443}@${DOMAIN}:${PORT_443}?security=tls&type=tcp&flow=xtls-rprx-vision&sni=${DOMAIN}#Port${PORT_443}-TCP-TLS-Vision"
     echo ""
 fi
 
-if [ "$ENABLE_443" = "yes" ]; then
-    echo -e "${GREEN}━━━ Port ${PORT_443} (WebSocket + TLS - RECOMMENDED) ━━━${NC}"
-    echo "vless://${UUID_443}@${DOMAIN}:${PORT_443}?path=${PATH_443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_443}-TLS-WS"
+if [ "$ENABLE_8443" = "yes" ]; then
+    echo -e "${GREEN}━━━ Port ${PORT_8443} (TCP + TLS + Vision) ━━━${NC}"
+    echo "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?security=tls&type=tcp&flow=xtls-rprx-vision&sni=${DOMAIN}#Port${PORT_8443}-TCP-TLS-Vision"
     echo ""
 fi
 
@@ -595,8 +615,8 @@ if command -v qrencode &> /dev/null; then
     echo "Creating QR codes for all enabled ports..."
     [ "$ENABLE_80" = "yes" ] && qrencode -t PNG -s 10 -o qrcodes/port${PORT_80}.png "vless://${UUID_80}@${DOMAIN}:${PORT_80}?path=${PATH_80}&type=ws#Port${PORT_80}-WS"
     [ "$ENABLE_8080" = "yes" ] && qrencode -t PNG -s 10 -o qrcodes/port${PORT_8080}.png "vless://${UUID_8080}@${DOMAIN}:${PORT_8080}?path=${PATH_8080}&type=ws#Port${PORT_8080}-WS"
-    [ "$ENABLE_8443" = "yes" ] && qrencode -t PNG -s 10 -o qrcodes/port${PORT_8443}.png "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?path=${PATH_8443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_8443}-TLS-WS"
-    [ "$ENABLE_443" = "yes" ] && qrencode -t PNG -s 10 -o qrcodes/port${PORT_443}.png "vless://${UUID_443}@${DOMAIN}:${PORT_443}?path=${PATH_443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_443}-TLS-WS"
+    [ "$ENABLE_443" = "yes" ] && qrencode -t PNG -s 10 -o qrcodes/port${PORT_443}.png "vless://${UUID_443}@${DOMAIN}:${PORT_443}?security=tls&type=tcp&flow=xtls-rprx-vision&sni=${DOMAIN}#Port${PORT_443}-TCP-TLS-Vision"
+    [ "$ENABLE_8443" = "yes" ] && qrencode -t PNG -s 10 -o qrcodes/port${PORT_8443}.png "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?security=tls&type=tcp&flow=xtls-rprx-vision&sni=${DOMAIN}#Port${PORT_8443}-TCP-TLS-Vision"
     
     # Generate ASCII QR codes for terminal display
     echo ""
@@ -616,27 +636,28 @@ if command -v qrencode &> /dev/null; then
         echo ""
     }
     
-    [ "$ENABLE_8443" = "yes" ] && {
-        echo -e "${BLUE}━━━ Port ${PORT_8443} (WebSocket + TLS) ━━━${NC}"
-        echo "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?path=${PATH_8443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_8443}-TLS-WS"
+    [ "$ENABLE_443" = "yes" ] && {
+        echo -e "${GREEN}━━━ Port ${PORT_443} (TCP + TLS + Vision - RECOMMENDED) ━━━${NC}"
+        echo "vless://${UUID_443}@${DOMAIN}:${PORT_443}?security=tls&type=tcp&flow=xtls-rprx-vision&sni=${DOMAIN}#Port${PORT_443}-TCP-TLS-Vision"
         echo ""
-        qrencode -t ANSIUTF8 "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?path=${PATH_8443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_8443}-TLS-WS"
+        qrencode -t ANSIUTF8 "vless://${UUID_443}@${DOMAIN}:${PORT_443}?security=tls&type=tcp&flow=xtls-rprx-vision&sni=${DOMAIN}#Port${PORT_443}-TCP-TLS-Vision"
         echo ""
     }
     
-    [ "$ENABLE_443" = "yes" ] && {
-        echo -e "${GREEN}━━━ Port ${PORT_443} (WebSocket + TLS - RECOMMENDED) ━━━${NC}"
-        echo "vless://${UUID_443}@${DOMAIN}:${PORT_443}?path=${PATH_443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_443}-TLS-WS"
+    [ "$ENABLE_8443" = "yes" ] && {
+        echo -e "${GREEN}━━━ Port ${PORT_8443} (TCP + TLS + Vision) ━━━${NC}"
+        echo "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?security=tls&type=tcp&flow=xtls-rprx-vision&sni=${DOMAIN}#Port${PORT_8443}-TCP-TLS-Vision"
         echo ""
-        qrencode -t ANSIUTF8 "vless://${UUID_443}@${DOMAIN}:${PORT_443}?path=${PATH_443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_443}-TLS-WS"
+        qrencode -t ANSIUTF8 "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?security=tls&type=tcp&flow=xtls-rprx-vision&sni=${DOMAIN}#Port${PORT_8443}-TCP-TLS-Vision"
         echo ""
     }
     
     echo -e "${GREEN}✓ PNG QR codes saved to: qrcodes/${NC}"
-    PNG_LIST="port${PORT_80}.png"
+    PNG_LIST=""
+    [ "$ENABLE_80" = "yes" ] && PNG_LIST+="port${PORT_80}.png"
     [ "$ENABLE_8080" = "yes" ] && PNG_LIST+=" , port${PORT_8080}.png"
+    [ "$ENABLE_443" = "yes" ] && PNG_LIST+=" , port${PORT_443}.png"
     [ "$ENABLE_8443" = "yes" ] && PNG_LIST+=" , port${PORT_8443}.png"
-    PNG_LIST+=" , port${PORT_443}.png"
     echo "   ${PNG_LIST}"
     echo ""
 else
@@ -645,10 +666,10 @@ else
     echo "Installing qrencode..."
     if sudo apt-get install -y qrencode > /dev/null 2>&1; then
         mkdir -p qrcodes
-        qrencode -t PNG -s 10 -o qrcodes/port${PORT_80}.png "vless://${UUID_80}@${DOMAIN}:${PORT_80}?path=${PATH_80}&type=ws#Port${PORT_80}-WS"
-        qrencode -t PNG -s 10 -o qrcodes/port${PORT_8080}.png "vless://${UUID_8080}@${DOMAIN}:${PORT_8080}?path=${PATH_8080}&type=ws#Port${PORT_8080}-WS"
-        qrencode -t PNG -s 10 -o qrcodes/port${PORT_8443}.png "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?path=${PATH_8443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_8443}-TLS-WS"
-        qrencode -t PNG -s 10 -o qrcodes/port${PORT_443}.png "vless://${UUID_443}@${DOMAIN}:${PORT_443}?path=${PATH_443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_443}-TLS-WS"
+        [ "$ENABLE_80" = "yes" ] && qrencode -t PNG -s 10 -o qrcodes/port${PORT_80}.png "vless://${UUID_80}@${DOMAIN}:${PORT_80}?path=${PATH_80}&type=ws#Port${PORT_80}-WS"
+        [ "$ENABLE_8080" = "yes" ] && qrencode -t PNG -s 10 -o qrcodes/port${PORT_8080}.png "vless://${UUID_8080}@${DOMAIN}:${PORT_8080}?path=${PATH_8080}&type=ws#Port${PORT_8080}-WS"
+        [ "$ENABLE_443" = "yes" ] && qrencode -t PNG -s 10 -o qrcodes/port${PORT_443}.png "vless://${UUID_443}@${DOMAIN}:${PORT_443}?security=tls&type=tcp&flow=xtls-rprx-vision&sni=${DOMAIN}#Port${PORT_443}-TCP-TLS-Vision"
+        [ "$ENABLE_8443" = "yes" ] && qrencode -t PNG -s 10 -o qrcodes/port${PORT_8443}.png "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?security=tls&type=tcp&flow=xtls-rprx-vision&sni=${DOMAIN}#Port${PORT_8443}-TCP-TLS-Vision"
         
         echo ""
         if [ "$ENABLE_80" = "yes" ]; then
@@ -667,19 +688,19 @@ else
             echo ""
         fi
         
-        if [ "$ENABLE_8443" = "yes" ]; then
-            echo -e "${BLUE}━━━ Port ${PORT_8443} (WebSocket + TLS) ━━━${NC}"
-            echo "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?path=${PATH_8443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_8443}-TLS-WS"
+        if [ "$ENABLE_443" = "yes" ]; then
+            echo -e "${GREEN}━━━ Port ${PORT_443} (TCP + TLS + Vision - RECOMMENDED) ━━━${NC}"
+            echo "vless://${UUID_443}@${DOMAIN}:${PORT_443}?security=tls&type=tcp&flow=xtls-rprx-vision&sni=${DOMAIN}#Port${PORT_443}-TCP-TLS-Vision"
             echo ""
-            qrencode -t ANSIUTF8 "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?path=${PATH_8443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_8443}-TLS-WS"
+            qrencode -t ANSIUTF8 "vless://${UUID_443}@${DOMAIN}:${PORT_443}?security=tls&type=tcp&flow=xtls-rprx-vision&sni=${DOMAIN}#Port${PORT_443}-TCP-TLS-Vision"
             echo ""
         fi
         
-        if [ "$ENABLE_443" = "yes" ]; then
-            echo -e "${GREEN}━━━ Port ${PORT_443} (WebSocket + TLS - RECOMMENDED) ━━━${NC}"
-            echo "vless://${UUID_443}@${DOMAIN}:${PORT_443}?path=${PATH_443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_443}-TLS-WS"
+        if [ "$ENABLE_8443" = "yes" ]; then
+            echo -e "${GREEN}━━━ Port ${PORT_8443} (TCP + TLS + Vision) ━━━${NC}"
+            echo "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?security=tls&type=tcp&flow=xtls-rprx-vision&sni=${DOMAIN}#Port${PORT_8443}-TCP-TLS-Vision"
             echo ""
-            qrencode -t ANSIUTF8 "vless://${UUID_443}@${DOMAIN}:${PORT_443}?path=${PATH_443}&security=tls&type=ws&sni=${DOMAIN}&host=${DOMAIN}#Port${PORT_443}-TLS-WS"
+            qrencode -t ANSIUTF8 "vless://${UUID_8443}@${DOMAIN}:${PORT_8443}?security=tls&type=tcp&flow=xtls-rprx-vision&sni=${DOMAIN}#Port${PORT_8443}-TCP-TLS-Vision"
             echo ""
         fi
         

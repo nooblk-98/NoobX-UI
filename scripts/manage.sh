@@ -83,13 +83,18 @@ for ib in data.get('inbounds', []):
         continue
     port = ib.get('port')
     stream = ib.get('streamSettings', {})
+    network = stream.get('network', '')
     ws = stream.get('wsSettings', {})
     path = ws.get('path', '')
     security = stream.get('security', 'none')
     clients = ib.get('settings', {}).get('clients', [])
     uuid = clients[0].get('id') if clients else ''
-    host = ws.get('headers', {}).get('Host', '')
-    if security == 'tls':
+    flow = clients[0].get('flow') if clients else None
+    host = ws.get('host') or ws.get('headers', {}).get('Host', '')
+    if security == 'tls' and network == 'tcp':
+        flow_q = f"&flow={flow}" if flow else ""
+        link = f"vless://{uuid}@{host}:{port}?security=tls&type=tcp{flow_q}&sni={host}#Port{port}-TCP-TLS"
+    elif security == 'tls':
         link = f"vless://{uuid}@{host}:{port}?path={path}&security=tls&type=ws&sni={host}&host={host}#Port{port}-TLS-WS"
     else:
         link = f"vless://{uuid}@{host}:{port}?path={path}&type=ws#Port{port}-WS"
