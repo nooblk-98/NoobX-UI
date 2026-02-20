@@ -7,15 +7,19 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     certbot \
     openssl \
-    bash \
+    unzip \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Xray-core
-RUN /bin/bash -c "bash <(curl -Ls https://raw.githubusercontent.com/XTLS/Xray-install/main/install-release.sh)"
+# Create directories
+RUN mkdir -p /etc/xray /var/log/xray /certs
 
-# Create directories for configurations and certificates
-RUN mkdir -p /etc/xray /certs /var/log/xray
+# Download and install Xray directly (no systemd required)
+RUN XRAY_VERSION=$(curl -s https://api.github.com/repos/XTLS/Xray-core/releases/latest | grep -oP '"tag_name": "\K[^"]*') && \
+    wget -q https://github.com/XTLS/Xray-core/releases/download/${XRAY_VERSION}/Xray-linux-64.zip && \
+    unzip -q Xray-linux-64.zip -d /usr/local/bin && \
+    rm Xray-linux-64.zip && \
+    chmod +x /usr/local/bin/xray
 
 # Copy Xray configuration files
 COPY xray-configs/ /etc/xray/
