@@ -636,20 +636,45 @@
     }
 
     function copyUrl(button) {
-      const input = button.previousElementSibling;
-      if (!input) return;
-      input.select();
-      navigator.clipboard.writeText(input.value);
+      // Find the input field in the parent container
+      const container = button.closest('.share-url-container');
+      const input = container ? container.querySelector('input') : button.previousElementSibling;
+      
+      if (!input) {
+        console.error('Input field not found');
+        return;
+      }
+      
+      // Copy to clipboard
+      navigator.clipboard.writeText(input.value).then(() => {
+        // Success - show feedback
+        const icon = button.querySelector('i');
+        const origText = icon.textContent;
+        icon.textContent = 'check';
+        button.style.color = 'var(--mdc-theme-success)';
 
-      const icon = button.querySelector('i');
-      const origText = icon.textContent;
-      icon.textContent = 'check';
-      button.style.color = 'var(--mdc-theme-success)';
-
-      setTimeout(() => {
-        icon.textContent = origText;
-        button.style.color = '';
-      }, 2000);
+        setTimeout(() => {
+          icon.textContent = origText;
+          button.style.color = '';
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy:', err);
+        // Fallback for older browsers
+        try {
+          input.select();
+          document.execCommand('copy');
+          const icon = button.querySelector('i');
+          const origText = icon.textContent;
+          icon.textContent = 'check';
+          button.style.color = 'var(--mdc-theme-success)';
+          setTimeout(() => {
+            icon.textContent = origText;
+            button.style.color = '';
+          }, 2000);
+        } catch (e) {
+          console.error('Fallback copy failed:', e);
+        }
+      });
     }
 
     function closeModal(event) {
