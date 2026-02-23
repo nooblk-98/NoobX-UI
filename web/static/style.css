@@ -967,6 +967,66 @@ a {
   margin-bottom: 16px;
   opacity: 0.5;
 }
+/* Info Cards Grid */
+.info-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin: 16px 0 24px 0;
+}
+
+.info-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background-color: var(--mdc-theme-surface);
+  border: 1px solid var(--mdc-border-color);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.info-card:hover {
+  background-color: var(--mdc-theme-surface-2);
+  border-color: var(--mdc-theme-primary);
+}
+
+.info-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  width: 48px;
+  height: 48px;
+  background-color: rgba(187, 134, 252, 0.1);
+  border-radius: 50%;
+  color: var(--mdc-theme-primary);
+}
+
+.info-card-icon i {
+  font-size: 24px;
+}
+
+.info-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.info-card-label {
+  font-size: 0.75rem;
+  color: var(--mdc-theme-text-secondary-on-background);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.info-card-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--mdc-theme-text-primary-on-background);
+  word-break: break-word;
+}
+
 /* Gauge Meters */
 .gauges-grid {
   display: grid;

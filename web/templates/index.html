@@ -77,6 +77,30 @@
         <!-- DASHBOARD SECTION -->
         <section id="section-dashboard" class="content-section active">
           <h5 class="section-title">Overview</h5>
+          <div class="info-cards-grid">
+            <div class="info-card">
+              <div class="info-card-icon"><i class="material-icons">verified</i></div>
+              <div class="info-card-content">
+                <div class="info-card-label">Xray Version</div>
+                <div class="info-card-value">{{ status.xray_version }}</div>
+              </div>
+            </div>
+            <div class="info-card">
+              <div class="info-card-icon"><i class="material-icons">{{ 'check_circle' if status.running else 'error' }}</i></div>
+              <div class="info-card-content">
+                <div class="info-card-label">Engine Status</div>
+                <div class="info-card-value">{{ 'Running' if status.running else 'Stopped' }}</div>
+              </div>
+            </div>
+            <div class="info-card">
+              <div class="info-card-icon"><i class="material-icons">wifi_tethering</i></div>
+              <div class="info-card-content">
+                <div class="info-card-label">Active Configs</div>
+                <div class="info-card-value">{{ active_count }}</div>
+              </div>
+            </div>
+          </div>
+
           <h5 class="section-title">System Metrics</h5>
           <div class="gauges-grid">
             <div class="gauge-container">
