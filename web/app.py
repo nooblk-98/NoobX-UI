@@ -706,6 +706,7 @@ def index():
         summary=_summary,
         message=message,
         error=error,
+        DEFAULTS=DEFAULTS,
     )
 
 
