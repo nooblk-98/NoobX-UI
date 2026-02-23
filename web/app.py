@@ -119,6 +119,56 @@ def get_sys_info() -> dict:
     return info
 
 
+_last_net_io = None
+_last_net_time = None
+
+def get_net_speed() -> dict:
+    global _last_net_io, _last_net_time
+    up_speed = 0.0
+    down_speed = 0.0
+    import platform
+    import time
+    if platform.system() == "Linux":
+        try:
+            with open('/proc/net/dev', 'r') as f:
+                lines = f.readlines()
+            rx_bytes = 0
+            tx_bytes = 0
+            for line in lines[2:]:
+                if "lo:" in line:
+                    continue
+                parts = line.split(':')
+                if len(parts) == 2:
+                    ifparts = parts[1].split()
+                    rx_bytes += int(ifparts[0])
+                    tx_bytes += int(ifparts[8])
+            now = time.time()
+            if _last_net_time is not None and _last_net_io is not None:
+                elapsed = now - _last_net_time
+                if elapsed > 0:
+                    down_speed = (rx_bytes - _last_net_io[0]) / elapsed
+                    up_speed = (tx_bytes - _last_net_io[1]) / elapsed
+            _last_net_io = (rx_bytes, tx_bytes)
+            _last_net_time = now
+        except Exception:
+            pass
+            
+    def format_speed(b):
+        if b < 1024:
+            return f"{b:.1f} B/s"
+        elif b < 1024 * 1024:
+            return f"{b/1024:.1f} KB/s"
+        else:
+            return f"{b/1024/1024:.1f} MB/s"
+            
+    return {
+        "up_str": format_speed(max(0, up_speed)),
+        "down_str": format_speed(max(0, down_speed)),
+        "up_raw": max(0, up_speed) / 1024,
+        "down_raw": max(0, down_speed) / 1024
+    }
+
+
 def get_xray_version() -> str:
     try:
         res = subprocess.run([XRAY_BIN, "version"], capture_output=True, text=True, timeout=2)
@@ -186,6 +236,9 @@ def get_status() -> dict:
             pid = int(PID_PATH.read_text(encoding="utf-8").strip())
         except ValueError:
             pid = None
+            
+    speeds = get_net_speed()
+    
     return {
         "running": running,
         "pid": pid,
@@ -196,8 +249,10 @@ def get_status() -> dict:
         "now": _now_iso(),
         "xray_version": get_xray_version(),
         "sys_info": get_sys_info(),
-        "up_speed": "12.4 KB/s",
-        "down_speed": "48.2 KB/s",
+        "up_speed": speeds["up_str"],
+        "down_speed": speeds["down_str"],
+        "up_raw": speeds["up_raw"],
+        "down_raw": speeds["down_raw"],
     }
 
 

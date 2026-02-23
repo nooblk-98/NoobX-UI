@@ -7,8 +7,10 @@
   <title>Xray Material Dashboard</title>
   <!-- Use Roboto font for Material Design -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -92,14 +94,14 @@
               <div class="card-icon info-text"><i class="material-icons">memory</i></div>
               <div class="card-info">
                 <div class="card-subtitle">CPU Usage</div>
-                <div class="card-title">{{ status.sys_info.cpu if status.sys_info else '0.00' }}</div>
+                <div class="card-title" id="ui-cpu">{{ status.sys_info.cpu if status.sys_info else '0.00' }}</div>
               </div>
             </div>
             <div class="mdc-card mdc-card--outlined">
               <div class="card-icon info-text"><i class="material-icons">storage</i></div>
               <div class="card-info">
                 <div class="card-subtitle">Memory Usage</div>
-                <div class="card-title">{{ status.sys_info.mem if status.sys_info else '0.0%' }}</div>
+                <div class="card-title" id="ui-mem">{{ status.sys_info.mem if status.sys_info else '0.0%' }}</div>
               </div>
             </div>
           </div>
@@ -109,16 +111,23 @@
             <div class="mdc-card speed-card">
               <i class="material-icons primary-text">arrow_upward</i>
               <div>
-                <div class="speed-value">{{ status.up_speed }}</div>
+                <div class="speed-value" id="ui-up">{{ status.up_speed }}</div>
                 <div class="speed-label">Upload</div>
               </div>
             </div>
             <div class="mdc-card speed-card">
               <i class="material-icons success-text">arrow_downward</i>
               <div>
-                <div class="speed-value">{{ status.down_speed }}</div>
+                <div class="speed-value" id="ui-down">{{ status.down_speed }}</div>
                 <div class="speed-label">Download</div>
               </div>
+            </div>
+          </div>
+
+          <div class="mdc-card mdc-card--outlined" style="margin-top: 24px; padding: 16px;">
+            <h5 class="section-title" style="margin-top: 0;">Traffic History (KB/s)</h5>
+            <div style="height: 300px; width: 100%;">
+              <canvas id="trafficChart"></canvas>
             </div>
           </div>
         </section>
@@ -396,6 +405,92 @@
   </div>
 
   <script>
+    // Realtime Polling & Chart.js
+    let trafficChart;
+    const maxDataPoints = 30; // 30 seconds
+    const trafficLabels = Array(maxDataPoints).fill('');
+    const upData = Array(maxDataPoints).fill(0);
+    const downData = Array(maxDataPoints).fill(0);
+
+    function initChart() {
+      const ctx = document.getElementById('trafficChart').getContext('2d');
+      trafficChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: trafficLabels,
+          datasets: [
+            {
+              label: 'Upload (KB/s)',
+              data: upData,
+              borderColor: 'rgba(187, 134, 252, 1)',
+              backgroundColor: 'rgba(187, 134, 252, 0.2)',
+              borderWidth: 2,
+              pointRadius: 0,
+              tension: 0.4,
+              fill: true
+            },
+            {
+              label: 'Download (KB/s)',
+              data: downData,
+              borderColor: 'rgba(3, 218, 198, 1)',
+              backgroundColor: 'rgba(3, 218, 198, 0.2)',
+              borderWidth: 2,
+              pointRadius: 0,
+              tension: 0.4,
+              fill: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 0 },
+          scales: {
+            x: { display: false },
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(255, 255, 255, 0.1)' },
+              ticks: { color: 'rgba(255, 255, 255, 0.6)' }
+            }
+          },
+          plugins: {
+            legend: { labels: { color: 'rgba(255, 255, 255, 0.87)' } }
+          }
+        }
+      });
+    }
+
+    async function pollStatus() {
+      try {
+        const res = await fetch('/status');
+        const data = await res.json();
+
+        // Update UI
+        if (data.sys_info) {
+          document.getElementById('ui-cpu').textContent = data.sys_info.cpu;
+          document.getElementById('ui-mem').textContent = data.sys_info.mem;
+        }
+        document.getElementById('ui-up').textContent = data.up_speed;
+        document.getElementById('ui-down').textContent = data.down_speed;
+
+        // Update Chart
+        if (trafficChart) {
+          upData.shift();
+          upData.push(data.up_raw);
+          downData.shift();
+          downData.push(data.down_raw);
+          trafficChart.update();
+        }
+      } catch (err) {
+        console.error('Failed to update status', err);
+      }
+    }
+
+    if (document.getElementById('trafficChart')) {
+      initChart();
+      setInterval(pollStatus, 1000);
+    }
+
     // Tab Switching
     const navItems = document.querySelectorAll('.mdc-list-item');
     const sections = document.querySelectorAll('.content-section');
