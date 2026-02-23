@@ -636,45 +636,72 @@
     }
 
     function copyUrl(button) {
-      // Find the input field in the parent container
-      const container = button.closest('.share-url-container');
-      const input = container ? container.querySelector('input') : button.previousElementSibling;
+      // Find the input field - try multiple approaches
+      let input = null;
       
+      // Try to find input in the same container
+      const container = button.parentElement;
+      if (container) {
+        input = container.querySelector('input[type="text"]');
+      }
+      
+      // If not found, try finding in parent container
       if (!input) {
-        console.error('Input field not found');
+        input = button.closest('.share-url-container').querySelector('input[type="text"]');
+      }
+      
+      // If still not found, try broader search
+      if (!input) {
+        input = button.closest('.share-item').querySelector('input[type="text"]');
+      }
+      
+      if (!input || !input.value) {
+        console.error('Input field or value not found');
         return;
       }
       
-      // Copy to clipboard
-      navigator.clipboard.writeText(input.value).then(() => {
-        // Success - show feedback
-        const icon = button.querySelector('i');
-        const origText = icon.textContent;
-        icon.textContent = 'check';
-        button.style.color = 'var(--mdc-theme-success)';
-
-        setTimeout(() => {
-          icon.textContent = origText;
-          button.style.color = '';
-        }, 2000);
-      }).catch(err => {
-        console.error('Failed to copy:', err);
+      const urlText = input.value;
+      console.log('Copying:', urlText.substring(0, 50) + '...');
+      
+      // Use Clipboard API
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(urlText)
+          .then(() => {
+            showCopySuccess(button);
+          })
+          .catch(err => {
+            console.error('Clipboard API failed:', err);
+            // Fallback
+            fallbackCopy(input, button);
+          });
+      } else {
         // Fallback for older browsers
-        try {
-          input.select();
-          document.execCommand('copy');
-          const icon = button.querySelector('i');
-          const origText = icon.textContent;
-          icon.textContent = 'check';
-          button.style.color = 'var(--mdc-theme-success)';
-          setTimeout(() => {
-            icon.textContent = origText;
-            button.style.color = '';
-          }, 2000);
-        } catch (e) {
-          console.error('Fallback copy failed:', e);
-        }
-      });
+        fallbackCopy(input, button);
+      }
+    }
+    
+    function fallbackCopy(input, button) {
+      try {
+        input.select();
+        input.setSelectionRange(0, 99999); // For mobile devices
+        document.execCommand('copy');
+        showCopySuccess(button);
+      } catch (err) {
+        console.error('Fallback copy failed:', err);
+        alert('Copy failed. Please try again.');
+      }
+    }
+    
+    function showCopySuccess(button) {
+      const icon = button.querySelector('i');
+      const origText = icon.textContent;
+      icon.textContent = 'check';
+      button.style.color = 'var(--mdc-theme-success)';
+
+      setTimeout(() => {
+        icon.textContent = origText;
+        button.style.color = '';
+      }, 2000);
     }
 
     function closeModal(event) {
