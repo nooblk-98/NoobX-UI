@@ -931,10 +931,13 @@ a {
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
   width: 100%;
   max-width: 620px;
+  /* Use height + max-height so flex children can reliably scroll */
+  height: 90dvh;
   max-height: 90dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* clip rounded corners; body handles its own scroll */
 }
 
 /* ── Header ──────────────────────────────────────────────── */
@@ -999,8 +1002,18 @@ a {
 
 /* ── Scrollable body ─────────────────────────────────────── */
 .cfg-dialog__body {
-  flex: 1;
+  flex: 1 1 0;
+  /* 0 basis so it can shrink below content size */
+  min-height: 0;
+  /* CRITICAL — allows flex child to shrink & scroll */
   overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  /* iOS momentum scroll */
+  overscroll-behavior: contain;
+  /* stop page scroll bleeding through */
+  touch-action: pan-y;
+  /* allow vertical swipe on touch */
   padding: 0;
   scrollbar-width: thin;
   scrollbar-color: rgba(187, 134, 252, 0.3) transparent;
