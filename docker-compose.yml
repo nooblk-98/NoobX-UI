@@ -8,7 +8,7 @@ services:
     network_mode: host
     environment:
       - UI_PORT=8088
-      - XRAY_DOMAIN=example.com
+      - XRAY_DOMAIN=vpn.itsnooblk.com
     volumes:
       - xray-data:/data
     cap_add:
