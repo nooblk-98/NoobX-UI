@@ -806,6 +806,20 @@ a {
   outline: none;
 }
 
+.mdc-text-field__input[type="text"],
+.mdc-text-field__input[type="number"],
+.mdc-text-field__input[type="email"] {
+  appearance: none;
+}
+
+.mdc-text-field select.mdc-text-field__input {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23BB86FC' d='M0 0l6 8 6-8H0z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
 .mdc-floating-label {
   position: absolute;
   left: 16px;

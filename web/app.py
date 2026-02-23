@@ -51,6 +51,8 @@ DEFAULTS = {
     "tls_key": "/data/certs/key.pem",
     "tls_host": DOMAIN,
     "dns": "1.1.1.1",
+    "fingerprint": "randomized",
+    "alpn": "h2,h3,http/1.1",
 }
 
 
@@ -547,7 +549,8 @@ def build_config(configs: list) -> dict:
                             "minVersion": "1.2",
                             "maxVersion": "1.3",
                             "cipherSuites": "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384:TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384:TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256:TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305:TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256",
-                            "alpn": ["http/1.1"],
+                            "fingerprint": form["fingerprint"],
+                            "alpn": [s.strip() for s in form["alpn"].split(",")],
                             "allowInsecure": False,
                         },
                         "wsSettings": {
@@ -754,6 +757,8 @@ def save():
         "tls_cert": request.form.get("tls_cert", DEFAULTS["tls_cert"]).strip() or DEFAULTS["tls_cert"],
         "tls_key": request.form.get("tls_key", DEFAULTS["tls_key"]).strip() or DEFAULTS["tls_key"],
         "dns": request.form.get("dns", DEFAULTS["dns"]).strip() or DEFAULTS["dns"],
+        "fingerprint": request.form.get("fingerprint", DEFAULTS["fingerprint"]).strip() or DEFAULTS["fingerprint"],
+        "alpn": request.form.get("alpn", DEFAULTS["alpn"]).strip() or DEFAULTS["alpn"],
     }
 
     try:

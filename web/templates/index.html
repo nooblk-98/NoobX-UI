@@ -396,6 +396,28 @@
             </div>
 
             <div class="divider"></div>
+            <h6 class="form-section-title">TLS Advanced Settings</h6>
+            <div class="form-grid">
+              <label class="mdc-text-field mdc-text-field--outlined">
+                <span class="mdc-notched-outline"></span>
+                <select class="mdc-text-field__input" name="fingerprint" style="appearance: none; cursor: pointer;">
+                  <option value="randomized" {% if form.fingerprint == 'randomized' %}selected{% endif %}>randomized</option>
+                  <option value="chrome" {% if form.fingerprint == 'chrome' %}selected{% endif %}>chrome</option>
+                  <option value="firefox" {% if form.fingerprint == 'firefox' %}selected{% endif %}>firefox</option>
+                  <option value="safari" {% if form.fingerprint == 'safari' %}selected{% endif %}>safari</option>
+                  <option value="edge" {% if form.fingerprint == 'edge' %}selected{% endif %}>edge</option>
+                </select>
+                <span class="mdc-floating-label">TLS Fingerprint</span>
+              </label>
+              <label class="mdc-text-field mdc-text-field--outlined">
+                <span class="mdc-notched-outline"></span>
+                <input type="text" class="mdc-text-field__input" name="alpn" value="{{ form.alpn or 'h2,h3,http/1.1' }}"
+                  placeholder="h2,h3,http/1.1">
+                <span class="mdc-floating-label">ALPN Protocols (comma-separated)</span>
+              </label>
+            </div>
+
+            <div class="divider"></div>
             <h6 class="form-section-title">DNS Configuration</h6>
             <div class="form-grid">
               <label class="mdc-text-field mdc-text-field--outlined span-2">
@@ -464,6 +486,9 @@
       form.elements['tls_email'].value = data.tls_email || '';
       form.elements['tls_cert'].value = data.tls_cert || '';
       form.elements['tls_key'].value = data.tls_key || '';
+      form.elements['fingerprint'].value = data.fingerprint || 'randomized';
+      form.elements['alpn'].value = data.alpn || 'h2,h3,http/1.1';
+      form.elements['dns'].value = data.dns || '1.1.1.1';
 
       toggleTransport();
       document.getElementById('edit-modal-scrim').style.display = 'flex';
