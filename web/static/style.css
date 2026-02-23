@@ -925,6 +925,7 @@ a {
   max-height: 90vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .mdc-dialog__title {
@@ -933,20 +934,24 @@ a {
   font-size: 1.25rem;
   font-weight: 500;
   border-bottom: 1px solid var(--mdc-border-color);
+  flex-shrink: 0;
 }
 
 .mdc-dialog__content {
-  padding: 0 24px;
+  padding: 24px;
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
 }
 
 .mdc-dialog__actions {
-  padding: 8px 24px;
+  padding: 16px 24px;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
   border-top: 1px solid var(--mdc-border-color);
+  flex-shrink: 0;
+  background-color: var(--mdc-theme-surface);
 }
 
 .empty-state {
