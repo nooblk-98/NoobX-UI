@@ -144,7 +144,9 @@
 
           <div class="config-grid">
             {% for item in configs %}
-            <div class="mdc-card config-card {{ 'config-card--active' if item.enabled else '' }}">
+            <div class="mdc-card config-card {{ 'config-card--active' if item.enabled else '' }}"
+              data-ws-port="{{ item.ws_port }}" data-tls-port="{{ item.tls_port }}" data-ws-en="{{ item.ws_enabled }}"
+              data-tls-en="{{ item.tls_enabled }}">
               <div class="config-header">
                 <div class="config-header-left">
                   <div class="drag-indicator-box">
@@ -152,7 +154,8 @@
                   </div>
                   <div class="config-info">
                     <h6 class="config-title">{{ item.name }}</h6>
-                    <div class="config-meta">{{ summary(item) }}</div>
+                    <div class="config-meta">{{ summary(item) }} &bull; <span class="config-live-status"><span
+                          class="status-dot grey"></span><span class="status-text text-muted">Idle</span></span></div>
                   </div>
                 </div>
 
@@ -480,6 +483,29 @@
           downData.shift();
           downData.push(data.down_raw);
           trafficChart.update();
+        }
+
+        // Update Active Status
+        if (data.active_ports) {
+          document.querySelectorAll('.config-card').forEach(card => {
+            const wsPortStr = card.getAttribute('data-ws-port');
+            const tlsPortStr = card.getAttribute('data-tls-port');
+            const enableWs = card.getAttribute('data-ws-en') === 'True';
+            const enableTls = card.getAttribute('data-tls-en') === 'True';
+
+            let isActive = false;
+            if (enableWs && wsPortStr && data.active_ports.includes(parseInt(wsPortStr))) { isActive = true; }
+            if (enableTls && tlsPortStr && data.active_ports.includes(parseInt(tlsPortStr))) { isActive = true; }
+
+            const statusDot = card.querySelector('.config-live-status');
+            if (statusDot) {
+              if (isActive) {
+                statusDot.innerHTML = '<span class="status-dot green"></span><span class="status-text success-text">Active Link</span>';
+              } else {
+                statusDot.innerHTML = '<span class="status-dot grey"></span><span class="status-text text-muted">Idle</span>';
+              }
+            }
+          });
         }
       } catch (err) {
         console.error('Failed to update status', err);

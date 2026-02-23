@@ -168,6 +168,26 @@ def get_net_speed() -> dict:
         "down_raw": max(0, down_speed) / 1024
     }
 
+def get_active_ports() -> list:
+    active_ports = set()
+    import platform
+    if platform.system() == "Linux":
+        for net_file in ["/proc/net/tcp", "/proc/net/tcp6"]:
+            try:
+                with open(net_file, "r") as f:
+                    lines = f.readlines()[1:]
+                for line in lines:
+                    parts = line.split()
+                    if len(parts) >= 4:
+                        if parts[3] == "01": # ESTABLISHED
+                            local_addr = parts[1]
+                            if ":" in local_addr:
+                                port_hex = local_addr.split(":")[1]
+                                active_ports.add(int(port_hex, 16))
+            except Exception:
+                pass
+    return list(active_ports)
+
 
 def get_xray_version() -> str:
     try:
@@ -238,6 +258,7 @@ def get_status() -> dict:
             pid = None
             
     speeds = get_net_speed()
+    active_ports = get_active_ports()
     
     return {
         "running": running,
@@ -253,6 +274,7 @@ def get_status() -> dict:
         "down_speed": speeds["down_str"],
         "up_raw": speeds["up_raw"],
         "down_raw": speeds["down_raw"],
+        "active_ports": active_ports,
     }
 
 

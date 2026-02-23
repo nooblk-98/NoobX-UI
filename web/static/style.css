@@ -406,6 +406,31 @@ a {
 .config-meta {
   font-size: 0.8125rem;
   color: var(--mdc-theme-text-secondary-on-background);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.green {
+  background-color: var(--mdc-theme-success);
+  box-shadow: 0 0 4px var(--mdc-theme-success);
+}
+
+.status-dot.grey {
+  background-color: var(--mdc-theme-text-disabled-on-background);
+}
+
+.config-live-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .config-header-right {
