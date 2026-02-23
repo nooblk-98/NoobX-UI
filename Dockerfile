@@ -28,10 +28,7 @@ RUN mkdir -p /opt/xray /opt/xray-web /data
 
 COPY config.default.json /opt/xray/config.default.json
 COPY web/ /opt/xray-web/
-COPY entrypoint.sh /entrypoint.sh
 
-RUN chmod +x /entrypoint.sh
+EXPOSE 8088
 
-EXPOSE 80 443 8080 8443 8088 8089
-
-ENTRYPOINT ["/entrypoint.sh"]
+CMD ["python3", "/opt/xray-web/app.py"]
