@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  xray-web:
+    image: lahiru98s/noobx-ui:latest
+    container_name: xray-web
+    network_mode: host
+    volumes:
+      - xray-data:/data
+    environment:
+      - UI_PORT=8088
+      - XRAY_DOMAIN=example.com
+    restart: unless-stopped
+
+volumes:
+  xray-data:
+    driver: local
