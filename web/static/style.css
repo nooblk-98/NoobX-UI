@@ -177,6 +177,9 @@ a {
 .drawer-footer {
   padding: 16px;
   border-top: 1px solid var(--mdc-border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .status-chip {
@@ -188,6 +191,21 @@ a {
   font-weight: 500;
   gap: 8px;
   background-color: var(--mdc-theme-surface-2);
+}
+
+.drawer-footer .mdc-button {
+  font-size: 0.75rem !important;
+  padding: 8px 12px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.drawer-footer .mdc-button i {
+  margin-right: 4px;
+}
 }
 
 .status-chip i {

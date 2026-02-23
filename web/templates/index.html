@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Xray Material Dashboard</title>
+  <title>NoobX-UI - Xray Dashboard</title>
   <!-- Use Roboto font for Material Design -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
@@ -18,7 +18,7 @@
     <!-- Sidebar Navigation -->
     <aside class="mdc-drawer">
       <div class="mdc-drawer__header">
-        <h3 class="mdc-drawer__title">Xray Engine</h3>
+        <h3 class="mdc-drawer__title">NoobX-UI</h3>
         <h6 class="mdc-drawer__subtitle">{{ status.domain }}</h6>
       </div>
       <div class="mdc-drawer__content">
@@ -45,6 +45,10 @@
           <i class="material-icons">{{ 'check_circle' if status.running else 'error' }}</i>
           {{ 'Engine Running' if status.running else 'Engine Stopped' }}
         </div>
+        <a href="https://github.com/nooblk-98" target="_blank" class="mdc-button mdc-button--outlined" style="margin-top: 10px; width: 100%; font-size: 12px;">
+          <i class="material-icons" style="font-size: 16px;">code</i>
+          <span class="mdc-button__label">Developed by nooblk</span>
+        </a>
       </div>
     </aside>
 
