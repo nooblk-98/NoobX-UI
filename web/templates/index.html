@@ -45,7 +45,8 @@
           <i class="material-icons">{{ 'check_circle' if status.running else 'error' }}</i>
           {{ 'Engine Running' if status.running else 'Engine Stopped' }}
         </div>
-        <a href="https://github.com/nooblk-98" target="_blank" class="mdc-button mdc-button--outlined" style="margin-top: 10px; width: 100%; font-size: 12px;">
+        <a href="https://github.com/nooblk-98" target="_blank" class="mdc-button mdc-button--outlined"
+          style="margin-top: 10px; width: 100%; font-size: 12px;">
           <i class="material-icons" style="font-size: 16px;">code</i>
           <span class="mdc-button__label">Developed by nooblk</span>
         </a>
@@ -86,7 +87,8 @@
               </div>
             </div>
             <div class="info-card">
-              <div class="info-card-icon"><i class="material-icons">{{ 'check_circle' if status.running else 'error' }}</i></div>
+              <div class="info-card-icon"><i class="material-icons">{{ 'check_circle' if status.running else 'error'
+                  }}</i></div>
               <div class="info-card-content">
                 <div class="info-card-label">Engine Status</div>
                 <div class="info-card-value">{{ 'Running' if status.running else 'Stopped' }}</div>
@@ -105,25 +107,25 @@
           <div class="gauges-grid">
             <div class="gauge-container">
               <div class="gauge-canvas-wrapper">
-                <canvas id="cpuGauge" width="160" height="160"></canvas>
+                <canvas id="cpuGauge" width="180" height="180"></canvas>
               </div>
               <div class="gauge-label">CPU Usage</div>
             </div>
             <div class="gauge-container">
               <div class="gauge-canvas-wrapper">
-                <canvas id="memGauge" width="160" height="160"></canvas>
+                <canvas id="memGauge" width="180" height="180"></canvas>
               </div>
               <div class="gauge-label">Memory Usage</div>
             </div>
             <div class="gauge-container">
               <div class="gauge-canvas-wrapper">
-                <canvas id="uploadGauge" width="160" height="160"></canvas>
+                <canvas id="uploadGauge" width="180" height="180"></canvas>
               </div>
               <div class="gauge-label">Upload</div>
             </div>
             <div class="gauge-container">
               <div class="gauge-canvas-wrapper">
-                <canvas id="downloadGauge" width="160" height="160"></canvas>
+                <canvas id="downloadGauge" width="180" height="180"></canvas>
               </div>
               <div class="gauge-label">Download</div>
             </div>
@@ -393,24 +395,25 @@
               </label>
             </div>
 
-          <div class="divider"></div>
-          <h6 class="form-section-title">DNS Configuration</h6>
-          <div class="form-grid">
-            <label class="mdc-text-field mdc-text-field--outlined span-2">
-              <span class="mdc-notched-outline"></span>
-              <input type="text" class="mdc-text-field__input" name="dns" value="{{ form.dns or '1.1.1.1' }}" placeholder="1.1.1.1">
-              <span class="mdc-floating-label">Remote DNS Server</span>
-            </label>
-          </div>
+            <div class="divider"></div>
+            <h6 class="form-section-title">DNS Configuration</h6>
+            <div class="form-grid">
+              <label class="mdc-text-field mdc-text-field--outlined span-2">
+                <span class="mdc-notched-outline"></span>
+                <input type="text" class="mdc-text-field__input" name="dns" value="{{ form.dns or '1.1.1.1' }}"
+                  placeholder="1.1.1.1">
+                <span class="mdc-floating-label">Remote DNS Server</span>
+              </label>
             </div>
           </div>
-        </form>
       </div>
-      <div class="mdc-dialog__actions">
-        <button type="button" class="mdc-button" onclick="closeModalDirect()">Cancel</button>
-        <button type="submit" form="configForm" class="mdc-button mdc-button--raised mdc-button--primary">Save</button>
-      </div>
+      </form>
     </div>
+    <div class="mdc-dialog__actions">
+      <button type="button" class="mdc-button" onclick="closeModalDirect()">Cancel</button>
+      <button type="submit" form="configForm" class="mdc-button mdc-button--raised mdc-button--primary">Save</button>
+    </div>
+  </div>
   </div>
   <!-- QR Modal -->
   <div class="mdc-dialog-scrim" id="qr-modal-scrim" onclick="closeQrModal(event)" style="display: none; z-index: 200;">
@@ -478,84 +481,121 @@
     function drawSegmentedGauge(canvasId, value, color, label) {
       const canvas = document.getElementById(canvasId);
       const ctx = canvas.getContext('2d');
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-      const radius = 60;
-      const segmentCount = 24;
-      const segmentAngle = (360 / segmentCount) * (Math.PI / 180);
-      const segmentWidth = (Math.PI * 2) / segmentCount * 0.85; // 85% of space for segment, 15% for gap
-      
-      // Clear canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Draw segments
-      const filledSegments = Math.ceil((value / 100) * segmentCount);
-      
-      for (let i = 0; i < segmentCount; i++) {
-        const angle = (i * segmentAngle) - Math.PI / 2;
-        
-        // Determine color based on fill
-        if (i < filledSegments) {
-          ctx.fillStyle = color;
-          ctx.shadowColor = color;
-          ctx.shadowBlur = 8;
-        } else {
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-          ctx.shadowColor = 'transparent';
-        }
-        
-        // Draw segment as a small bar/rectangle around circle
+      const W = canvas.width;
+      const H = canvas.height;
+      const centerX = W / 2;
+      const centerY = H / 2;
+
+      // Clear
+      ctx.clearRect(0, 0, W, H);
+
+      const totalTicks = 60;
+      const filledTicks = Math.round((value / 100) * totalTicks);
+      const outerRadius = W / 2 - 6;
+      const isNetworkGauge = (canvasId === 'uploadGauge' || canvasId === 'downloadGauge');
+
+      for (let i = 0; i < totalTicks; i++) {
+        const angle = (i / totalTicks) * Math.PI * 2 - Math.PI / 2;
+        const filled = i < filledTicks;
+
+        // Tick dimensions: tall & wide for filled, short & narrow for empty
+        const tickH = filled ? 10 : 4;
+        const tickW = filled ? 4 : 2;
+        const innerR = outerRadius - tickH;
+
+        const cosA = Math.cos(angle);
+        const sinA = Math.sin(angle);
+
+        // Tick start/end points (along the radius)
+        const x1 = centerX + innerR * cosA;
+        const y1 = centerY + innerR * sinA;
+        const x2 = centerX + outerRadius * cosA;
+        const y2 = centerY + outerRadius * sinA;
+
         ctx.save();
-        ctx.translate(centerX, centerY);
+        ctx.translate((x1 + x2) / 2, (y1 + y2) / 2);
         ctx.rotate(angle);
-        ctx.fillRect(radius - 8, -3, 8, 6);
+
+        if (filled) {
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 10;
+          ctx.fillStyle = color;
+        } else {
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        }
+
+        const len = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+        ctx.fillRect(-tickW / 2, -len / 2, tickW, len);
         ctx.restore();
       }
-      
-      // Draw center circle
-      ctx.fillStyle = 'var(--mdc-theme-surface)';
+
+      ctx.shadowColor = 'transparent';
+
+      // Inner dark circle
+      const innerCircleR = outerRadius - 18;
       ctx.beginPath();
-      ctx.arc(centerX, centerY, 45, 0, Math.PI * 2);
+      ctx.arc(centerX, centerY, innerCircleR, 0, Math.PI * 2);
+      ctx.fillStyle = '#1a1a2e';
       ctx.fill();
-      
-      // Draw border
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-      ctx.lineWidth = 1;
+
+      // Subtle inner border ring
       ctx.beginPath();
-      ctx.arc(centerX, centerY, 45, 0, Math.PI * 2);
+      ctx.arc(centerX, centerY, innerCircleR, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+      ctx.lineWidth = 1.5;
       ctx.stroke();
-      
-      // Draw text in center
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.87)';
-      ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
+      // Center text -- big bold number
+      const numericStr = isNetworkGauge ? value.toFixed(1) : Math.round(value).toString();
+      const unitStr = isNetworkGauge ? ' KB/s' : '%';
+
       ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      
-      let displayValue = value.toFixed(1);
-      if (canvasId === 'uploadGauge' || canvasId === 'downloadGauge') {
-        displayValue += ' KB/s';
-      } else {
-        displayValue += '%';
-      }
-      
-      ctx.fillText(displayValue, centerX, centerY);
-      
+      ctx.textBaseline = 'alphabetic';
+
+      // Draw number
+      ctx.font = 'bold 28px "Roboto", sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 6;
+      const numWidth = ctx.measureText(numericStr).width;
+
+      // Draw unit in smaller font beside the number
+      ctx.font = 'bold 14px "Roboto", sans-serif';
+      const unitWidth = ctx.measureText(unitStr).width;
+
+      const totalWidth = numWidth + unitWidth;
+      const startX = centerX - totalWidth / 2;
+
+      ctx.font = 'bold 28px "Roboto", sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 6;
+      ctx.fillText(numericStr, startX + numWidth / 2, centerY + 10);
+
+      ctx.font = 'bold 13px "Roboto", sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.shadowBlur = 0;
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(unitStr, startX + numWidth + unitWidth / 2, centerY + 10);
+
       ctx.shadowColor = 'transparent';
     }
 
     function updateGauge(canvasId, value, type) {
       gaugeValues[type] = value;
-      
+
       // Determine color based on type
       let color;
-      switch(type) {
+      switch (type) {
         case 'cpu': color = 'rgba(255, 152, 0, 1)'; break;
         case 'mem': color = 'rgba(76, 175, 80, 1)'; break;
         case 'upload': color = 'rgba(187, 134, 252, 1)'; break;
         case 'download': color = 'rgba(3, 218, 198, 1)'; break;
         default: color = 'rgba(187, 134, 252, 1)';
       }
-      
+
       drawSegmentedGauge(canvasId, value, color, type);
     }
 
@@ -750,31 +790,31 @@
     function copyUrl(button) {
       // Find the input field - try multiple approaches
       let input = null;
-      
+
       // Try to find input in the same container
       const container = button.parentElement;
       if (container) {
         input = container.querySelector('input[type="text"]');
       }
-      
+
       // If not found, try finding in parent container
       if (!input) {
         input = button.closest('.share-url-container').querySelector('input[type="text"]');
       }
-      
+
       // If still not found, try broader search
       if (!input) {
         input = button.closest('.share-item').querySelector('input[type="text"]');
       }
-      
+
       if (!input || !input.value) {
         console.error('Input field or value not found');
         return;
       }
-      
+
       const urlText = input.value;
       console.log('Copying:', urlText.substring(0, 50) + '...');
-      
+
       // Use Clipboard API
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(urlText)
@@ -791,7 +831,7 @@
         fallbackCopy(input, button);
       }
     }
-    
+
     function fallbackCopy(input, button) {
       try {
         input.select();
@@ -803,7 +843,7 @@
         alert('Copy failed. Please try again.');
       }
     }
-    
+
     function showCopySuccess(button) {
       const icon = button.querySelector('i');
       const origText = icon.textContent;
