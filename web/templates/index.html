@@ -146,7 +146,8 @@
             {% for item in configs %}
             <div class="mdc-card config-card {{ 'config-card--active' if item.enabled else '' }}"
               data-ws-port="{{ item.ws_port }}" data-tls-port="{{ item.tls_port }}" data-ws-en="{{ item.ws_enabled }}"
-              data-tls-en="{{ item.tls_enabled }}">
+              data-tls-en="{{ item.tls_enabled }}" data-ws-email="{{ item.ws_email }}"
+              data-tls-email="{{ item.tls_email }}">
               <div class="config-header">
                 <div class="config-header-left">
                   <div class="drag-indicator-box">
@@ -155,7 +156,8 @@
                   <div class="config-info">
                     <h6 class="config-title">{{ item.name }}</h6>
                     <div class="config-meta">{{ summary(item) }} &bull; <span class="config-live-status"><span
-                          class="status-dot grey"></span><span class="status-text text-muted">Idle</span></span></div>
+                          class="status-dot grey"></span><span class="status-text text-muted">Idle</span></span> <span
+                        class="config-usage text-muted" style="margin-left:8px; font-weight:500;"></span></div>
                   </div>
                 </div>
 
@@ -504,6 +506,20 @@
               } else {
                 statusDot.innerHTML = '<span class="status-dot grey"></span><span class="status-text text-muted">Idle</span>';
               }
+            }
+
+            const wsEmailStr = card.getAttribute('data-ws-email');
+            const tlsEmailStr = card.getAttribute('data-tls-email');
+            const usageSpan = card.querySelector('.config-usage');
+            if (usageSpan && data.xray_stats) {
+              let usageText = '';
+              if (enableWs && wsEmailStr && data.xray_stats[wsEmailStr]) {
+                usageText += `  WS: ${data.xray_stats[wsEmailStr].total_str} (${data.xray_stats[wsEmailStr].speed_str}) `;
+              }
+              if (enableTls && tlsEmailStr && data.xray_stats[tlsEmailStr]) {
+                usageText += `  TLS: ${data.xray_stats[tlsEmailStr].total_str} (${data.xray_stats[tlsEmailStr].speed_str})`;
+              }
+              usageSpan.textContent = usageText.trim();
             }
           });
         }

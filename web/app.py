@@ -153,13 +153,18 @@ def get_net_speed() -> dict:
         except Exception:
             pass
             
-    def format_speed(b):
+    def format_bytes(b):
         if b < 1024:
-            return f"{b:.1f} B/s"
+            return f"{b:.1f} B"
         elif b < 1024 * 1024:
-            return f"{b/1024:.1f} KB/s"
+            return f"{b/1024:.1f} KB"
+        elif b < 1024 * 1024 * 1024:
+            return f"{b/1024/1024:.1f} MB"
         else:
-            return f"{b/1024/1024:.1f} MB/s"
+            return f"{b/1024/1024/1024:.1f} GB"
+
+    def format_speed(b):
+        return f"{format_bytes(b)}/s"
             
     return {
         "up_str": format_speed(max(0, up_speed)),
@@ -167,6 +172,16 @@ def get_net_speed() -> dict:
         "up_raw": max(0, up_speed) / 1024,
         "down_raw": max(0, down_speed) / 1024
     }
+
+def format_bytes_global(b):
+    if b < 1024:
+        return f"{b:.1f} B"
+    elif b < 1024 * 1024:
+        return f"{b/1024:.1f} KB"
+    elif b < 1024 * 1024 * 1024:
+        return f"{b/1024/1024:.1f} MB"
+    else:
+        return f"{b/1024/1024/1024:.1f} GB"
 
 def get_active_ports() -> list:
     active_ports = set()
@@ -187,6 +202,55 @@ def get_active_ports() -> list:
             except Exception:
                 pass
     return list(active_ports)
+
+_last_stats = {}
+_last_stats_time = 0
+
+def get_xray_stats() -> dict:
+    global _last_stats, _last_stats_time
+    import time
+    now = time.time()
+    current_stats = {}
+    
+    if is_xray_running():
+        try:
+            res = subprocess.run([XRAY_BIN, "api", "statsquery", "-server=127.0.0.1:10085"], capture_output=True, text=True, timeout=1)
+            if res.returncode == 0:
+                data = json.loads(res.stdout)
+                for item in data.get("stat", []):
+                    name = item.get("name", "")
+                    value = int(item.get("value", 0))
+                    parts = name.split(">>>")
+                    if len(parts) == 4 and parts[0] == "user" and parts[2] == "traffic":
+                        email = parts[1]
+                        direction = parts[3]
+                        if email not in current_stats:
+                            current_stats[email] = {"up": 0, "down": 0}
+                        if direction == "uplink":
+                            current_stats[email]["up"] += value
+                        elif direction == "downlink":
+                            current_stats[email]["down"] += value
+        except Exception:
+            pass
+
+    elapsed = now - _last_stats_time if _last_stats_time else 0
+    output = {}
+    for email, traffic in current_stats.items():
+        prev = _last_stats.get(email, {"up": 0, "down": 0})
+        up_diff = max(0, traffic["up"] - prev["up"])
+        down_diff = max(0, traffic["down"] - prev["down"])
+        
+        up_speed = up_diff / elapsed if elapsed > 0 else 0
+        down_speed = down_diff / elapsed if elapsed > 0 else 0
+        
+        output[email] = {
+            "total_str": f"{format_bytes_global(traffic['down'])} \u2193 {format_bytes_global(traffic['up'])} \u2191",
+            "speed_str": f"{format_bytes_global(down_speed)}/s \u2193 {format_bytes_global(up_speed)}/s \u2191"
+        }
+        
+    _last_stats = current_stats
+    _last_stats_time = now
+    return output
 
 
 def get_xray_version() -> str:
@@ -259,6 +323,7 @@ def get_status() -> dict:
             
     speeds = get_net_speed()
     active_ports = get_active_ports()
+    xray_stats = get_xray_stats()
     
     return {
         "running": running,
@@ -275,6 +340,7 @@ def get_status() -> dict:
         "up_raw": speeds["up_raw"],
         "down_raw": speeds["down_raw"],
         "active_ports": active_ports,
+        "xray_stats": xray_stats,
     }
 
 
@@ -486,11 +552,40 @@ def build_config(configs: list) -> dict:
                 }
             )
 
+    inbounds.append({
+        "listen": "127.0.0.1",
+        "port": 10085,
+        "protocol": "dokodemo-door",
+        "settings": {
+            "address": "127.0.0.1"
+        },
+        "tag": "api"
+    })
+
     return {
         "log": {
             "loglevel": "info",
             "access": "/data/logs/access.log",
             "error": "/data/logs/error.log",
+        },
+        "api": {
+            "tag": "api",
+            "services": ["StatsService"]
+        },
+        "stats": {},
+        "policy": {
+            "levels": {
+                "0": {
+                    "statsUserUplink": True,
+                    "statsUserDownlink": True
+                }
+            },
+            "system": {
+                "statsInboundUplink": True,
+                "statsInboundDownlink": True,
+                "statsOutboundUplink": True,
+                "statsOutboundDownlink": True
+            }
         },
         "inbounds": inbounds,
         "outbounds": [
@@ -500,6 +595,7 @@ def build_config(configs: list) -> dict:
         "routing": {
             "domainStrategy": "IPOnDemand",
             "rules": [
+                {"type": "field", "inboundTag": ["api"], "outboundTag": "api"},
                 {"type": "field", "domain": ["geosite:private"], "outboundTag": "blocked"},
                 {"type": "field", "ip": ["geoip:private"], "outboundTag": "blocked"},
             ],
