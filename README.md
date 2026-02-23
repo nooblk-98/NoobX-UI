@@ -18,7 +18,8 @@ docker compose up -d --build
 
 Open the UI at:
 
-- `http://localhost:8088`
+- **HTTP:** `http://localhost:8088`
+- **HTTPS:** `https://localhost:8089` (self-signed cert)
 
 ## What you get
 
@@ -40,6 +41,10 @@ Edit these in `docker-compose.yml` under `environment`:
 
 - `XRAY_DOMAIN` - Your domain name (default: `example.com`)
 - `UI_PORT` - Web UI port (default: `8088`)
+
+The web UI runs on two ports:
+- Port 8088: HTTP (unencrypted)
+- Port 8089: HTTPS (with self-signed certificate)
 
 ## Notes
 
