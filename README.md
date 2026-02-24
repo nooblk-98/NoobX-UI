@@ -4,7 +4,7 @@ A modern web UI for managing Xray VPN configurations with real-time status monit
 
 ## Quick start
 
-1. Edit `docker-compose.yml` and set your domain:
+1. Edit `docker-compose-live.yml` and set your domain:
 ```yaml
 environment:
   - UI_PORT=8088
