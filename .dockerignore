@@ -2,7 +2,6 @@ README.md
 .git
 .gitignore
 .env.example
-scripts/
 logs/
 node_modules/
 .DS_Store

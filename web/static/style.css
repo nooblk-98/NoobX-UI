@@ -612,6 +612,19 @@ a {
   gap: 16px;
 }
 
+.settings-row--form {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.settings-row--form .settings-row-info {
+  flex: 1 1 220px;
+}
+
+.settings-row--form .settings-row-control {
+  flex: 0 1 220px;
+}
+
 .settings-row + .settings-row {
   margin-top: 12px;
 }

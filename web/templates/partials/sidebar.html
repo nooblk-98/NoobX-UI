@@ -1,0 +1,31 @@
+<aside class="mdc-drawer">
+  <div class="mdc-drawer__header">
+    <h3 class="mdc-drawer__title">NoobX-UI</h3>
+    <h6 class="mdc-drawer__subtitle">{{ status.domain }}</h6>
+  </div>
+  <div class="mdc-drawer__content">
+    <nav class="mdc-list">
+      <a class="mdc-list-item mdc-list-item--activated" href="#" data-target="dashboard">
+        <span class="mdc-list-item__ripple"></span>
+        <i class="material-icons mdc-list-item__graphic" aria-hidden="true">dashboard</i>
+        <span class="mdc-list-item__text">Dashboard</span>
+      </a>
+      <a class="mdc-list-item" href="#" data-target="configs">
+        <span class="mdc-list-item__ripple"></span>
+        <i class="material-icons mdc-list-item__graphic" aria-hidden="true">dns</i>
+        <span class="mdc-list-item__text">Configurations</span>
+      </a>
+      <a class="mdc-list-item" href="#" data-target="settings">
+        <span class="mdc-list-item__ripple"></span>
+        <i class="material-icons mdc-list-item__graphic" aria-hidden="true">settings</i>
+        <span class="mdc-list-item__text">Settings</span>
+      </a>
+    </nav>
+  </div>
+  <div class="drawer-footer">
+    <div class="status-chip {{ 'status-running' if status.running else 'status-stopped' }}">
+      <i class="material-icons">{{ 'check_circle' if status.running else 'error' }}</i>
+      {{ 'Engine Running' if status.running else 'Engine Stopped' }}
+    </div>
+  </div>
+</aside>
