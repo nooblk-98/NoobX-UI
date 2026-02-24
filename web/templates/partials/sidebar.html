@@ -5,17 +5,17 @@
   </div>
   <div class="mdc-drawer__content">
     <nav class="mdc-list">
-      <a class="mdc-list-item mdc-list-item--activated" href="#" data-target="dashboard">
+      <a class="mdc-list-item {{ 'mdc-list-item--activated' if page == 'dashboard' else '' }}" href="{{ url_for('dashboard') }}">
         <span class="mdc-list-item__ripple"></span>
         <i class="material-icons mdc-list-item__graphic" aria-hidden="true">dashboard</i>
         <span class="mdc-list-item__text">Dashboard</span>
       </a>
-      <a class="mdc-list-item" href="#" data-target="configs">
+      <a class="mdc-list-item {{ 'mdc-list-item--activated' if page == 'configurations' else '' }}" href="{{ url_for('configurations') }}">
         <span class="mdc-list-item__ripple"></span>
         <i class="material-icons mdc-list-item__graphic" aria-hidden="true">dns</i>
         <span class="mdc-list-item__text">Configurations</span>
       </a>
-      <a class="mdc-list-item" href="#" data-target="settings">
+      <a class="mdc-list-item {{ 'mdc-list-item--activated' if page == 'settings' else '' }}" href="{{ url_for('settings') }}">
         <span class="mdc-list-item__ripple"></span>
         <i class="material-icons mdc-list-item__graphic" aria-hidden="true">settings</i>
         <span class="mdc-list-item__text">Settings</span>

@@ -328,36 +328,21 @@ const navItems = document.querySelectorAll('.mdc-list-item');
 const sections = document.querySelectorAll('.content-section');
 const pageTitle = document.getElementById('page-title');
 
-const initHash = window.location.hash.replace('#', '') || 'dashboard';
-
-function switchTab(targetId) {
-  navItems.forEach(item => {
-    if (item.dataset.target === targetId) {
-      item.classList.add('mdc-list-item--activated');
-      pageTitle.textContent = item.querySelector('.mdc-list-item__text').textContent;
-    } else {
-      item.classList.remove('mdc-list-item--activated');
-    }
-  });
-
+// Set page title based on active section
+function updatePageTitle() {
   sections.forEach(sec => {
-    if (sec.id === 'section-' + targetId) {
-      sec.classList.add('active');
-    } else {
-      sec.classList.remove('active');
+    if (sec.classList.contains('active')) {
+      const navItem = [...navItems].find(item => 
+        item.classList.contains('mdc-list-item--activated')
+      );
+      if (navItem) {
+        pageTitle.textContent = navItem.querySelector('.mdc-list-item__text').textContent;
+      }
     }
   });
-  window.history.replaceState(null, null, '#' + targetId);
 }
 
-navItems.forEach(item => {
-  item.addEventListener('click', (e) => {
-    e.preventDefault();
-    switchTab(item.dataset.target);
-  });
-});
-
-switchTab(initHash);
+updatePageTitle();
 
 setTimeout(() => {
   const snackbars = document.querySelectorAll('.mdc-snackbar');

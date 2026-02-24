@@ -31,7 +31,7 @@
         {% endif %}
 
         <!-- DASHBOARD SECTION -->
-        <section id="section-dashboard" class="content-section active">
+        <section id="section-dashboard" class="content-section {% if page == 'dashboard' %}active{% endif %}"">
           <div class="info-cards-grid">
             <div class="info-card">
               <div class="info-card-icon"><i class="material-icons">verified</i></div>
@@ -95,7 +95,7 @@
         </section>
 
         <!-- CONFIGS SECTION -->
-        <section id="section-configs" class="content-section">
+        <section id="section-configs" class="content-section {% if page == 'configurations' %}active{% endif %}">
           <div class="section-header">
             <button type="button" onclick="openEditModal('new')"
               class="mdc-button mdc-button--raised mdc-button--primary">
@@ -182,7 +182,7 @@
         </section>
 
         <!-- SETTINGS SECTION -->
-        <section id="section-settings" class="content-section">
+        <section id="section-settings" class="content-section {% if page == 'settings' %}active{% endif %}">
           <h5 class="section-title">System Settings</h5>
           <div class="settings-grid">
             <div class="mdc-card settings-card">

@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 from uuid import uuid4
 
@@ -122,12 +123,96 @@ def create_app() -> Flask:
                 template_folder=str(web_dir / 'templates'),
                 static_folder=str(web_dir / 'static'))
 
+    # Suppress logging for status/health check endpoints
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
+
+    @app.before_request
+    def suppress_status_logs():
+        if request.path in ['/status', '/healthz']:
+            logging.getLogger('werkzeug').setLevel(logging.ERROR)
+        else:
+            logging.getLogger('werkzeug').setLevel(logging.INFO)
+
+
+def _prepare_configs_data():
+    """Helper function to prepare configuration data"""
+    store = _load_store()
+    active_count = 0
+    configs = store.get("configs", [])
+    for c in configs:
+        if c.get("enabled", True):
+            active_count += 1
+
+        c["links"] = []
+        proto = c.get("protocol", "vless")
+        name = c.get("name", "Config")
+        domain = c.get("domain", DOMAIN)
+        ws_host = c.get("ws_host", domain)
+        tls_host = c.get("tls_host", domain)
+        if c.get("tls_enabled"):
+            url = _vless_link(name, domain, c["tls_port"], c["tls_uuid"], c["tls_path"], True, tls_host) if proto == "vless" else _vmess_link(name, domain, c["tls_port"], c["tls_uuid"], c["tls_path"], True, tls_host)
+            c["links"].append({"label": "WebSocket + TLS", "url": url, "qr": _qr_data(url)})
+        if c.get("ws_enabled"):
+            url = _vless_link(name, domain, c["ws_port"], c["ws_uuid"], c["ws_path"], False, ws_host) if proto == "vless" else _vmess_link(name, domain, c["ws_port"], c["ws_uuid"], c["ws_path"], False, ws_host)
+            c["links"].append({"label": "WebSocket (No TLS)", "url": url, "qr": _qr_data(url)})
+    
+    return store, configs, active_count
+
+
+def create_app() -> Flask:
+    # Get the parent directory of the ui module (which is web/)
+    web_dir = Path(__file__).parent.parent
+    app = Flask(__name__,
+                template_folder=str(web_dir / 'templates'),
+                static_folder=str(web_dir / 'static'))
+
+    # Suppress logging for status/health check endpoints
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
+
+    @app.before_request
+    def suppress_status_logs():
+        if request.path in ['/status', '/healthz']:
+            logging.getLogger('werkzeug').setLevel(logging.ERROR)
+        else:
+            logging.getLogger('werkzeug').setLevel(logging.INFO)
+
     @app.route("/")
     def index():
+        return redirect(url_for("dashboard"))
+
+    @app.route("/dashboard")
+    def dashboard():
         status = get_status()
         xray_versions = list_xray_versions()
         xray_current_key = _current_xray_key(xray_versions)
-        store = _load_store()
+        store, configs, active_count = _prepare_configs_data()
+        message = request.args.get("message")
+        error = request.args.get("error")
+        return render_template(
+            "index.html",
+            page="dashboard",
+            status=status,
+            xray_versions=xray_versions,
+            xray_current_key=xray_current_key,
+            form=dict(DEFAULTS),
+            store=store,
+            active_count=active_count,
+            configs=configs,
+            edit_id=None,
+            summary=_summary,
+            message=message,
+            error=error,
+            DEFAULTS=DEFAULTS,
+        )
+
+    @app.route("/configurations")
+    def configurations():
+        status = get_status()
+        xray_versions = list_xray_versions()
+        xray_current_key = _current_xray_key(xray_versions)
+        store, configs, active_count = _prepare_configs_data()
         edit_id = request.args.get("edit")
 
         if edit_id == "new":
@@ -143,29 +228,11 @@ def create_app() -> Flask:
         else:
             form_state = dict(DEFAULTS)
 
-        active_count = 0
-        configs = store.get("configs", [])
-        for c in configs:
-            if c.get("enabled", True):
-                active_count += 1
-
-            c["links"] = []
-            proto = c.get("protocol", "vless")
-            name = c.get("name", "Config")
-            domain = c.get("domain", DOMAIN)
-            ws_host = c.get("ws_host", domain)
-            tls_host = c.get("tls_host", domain)
-            if c.get("tls_enabled"):
-                url = _vless_link(name, domain, c["tls_port"], c["tls_uuid"], c["tls_path"], True, tls_host) if proto == "vless" else _vmess_link(name, domain, c["tls_port"], c["tls_uuid"], c["tls_path"], True, tls_host)
-                c["links"].append({"label": "WebSocket + TLS", "url": url, "qr": _qr_data(url)})
-            if c.get("ws_enabled"):
-                url = _vless_link(name, domain, c["ws_port"], c["ws_uuid"], c["ws_path"], False, ws_host) if proto == "vless" else _vmess_link(name, domain, c["ws_port"], c["ws_uuid"], c["ws_path"], False, ws_host)
-                c["links"].append({"label": "WebSocket (No TLS)", "url": url, "qr": _qr_data(url)})
-
         message = request.args.get("message")
         error = request.args.get("error")
         return render_template(
             "index.html",
+            page="configurations",
             status=status,
             xray_versions=xray_versions,
             xray_current_key=xray_current_key,
@@ -174,6 +241,31 @@ def create_app() -> Flask:
             active_count=active_count,
             configs=configs,
             edit_id=edit_id,
+            summary=_summary,
+            message=message,
+            error=error,
+            DEFAULTS=DEFAULTS,
+        )
+
+    @app.route("/settings")
+    def settings():
+        status = get_status()
+        xray_versions = list_xray_versions()
+        xray_current_key = _current_xray_key(xray_versions)
+        store, configs, active_count = _prepare_configs_data()
+        message = request.args.get("message")
+        error = request.args.get("error")
+        return render_template(
+            "index.html",
+            page="settings",
+            status=status,
+            xray_versions=xray_versions,
+            xray_current_key=xray_current_key,
+            form=dict(DEFAULTS),
+            store=store,
+            active_count=active_count,
+            configs=configs,
+            edit_id=None,
             summary=_summary,
             message=message,
             error=error,
@@ -219,26 +311,26 @@ def create_app() -> Flask:
             else:
                 form["tls_port"] = DEFAULTS["tls_port"]
         except ValueError as exc:
-            return redirect(url_for("index", error=str(exc), edit=edit_id or "new"))
+            return redirect(url_for("configurations", error=str(exc), edit=edit_id or "new"))
 
         if not form["ws_enabled"] and not form["tls_enabled"]:
-            return redirect(url_for("index", error="Enable at least one inbound.", edit=edit_id or "new"))
+            return redirect(url_for("configurations", error="Enable at least one inbound.", edit=edit_id or "new"))
 
         for other_config in store.get("configs", []):
             if other_config.get("id") == form["id"]:
                 continue
             if form["ws_enabled"] and other_config.get("ws_enabled"):
                 if form["ws_port"] == other_config.get("ws_port"):
-                    return redirect(url_for("index", error=f"Port {form['ws_port']} is already used by '{other_config.get('name')}'", edit=edit_id or "new"))
+                    return redirect(url_for("configurations", error=f"Port {form['ws_port']} is already used by '{other_config.get('name')}'", edit=edit_id or "new"))
             if form["tls_enabled"] and other_config.get("tls_enabled"):
                 if form["tls_port"] == other_config.get("tls_port"):
-                    return redirect(url_for("index", error=f"Port {form['tls_port']} is already used by '{other_config.get('name')}'", edit=edit_id or "new"))
+                    return redirect(url_for("configurations", error=f"Port {form['tls_port']} is already used by '{other_config.get('name')}'", edit=edit_id or "new"))
             if form["ws_enabled"] and other_config.get("tls_enabled"):
                 if form["ws_port"] == other_config.get("tls_port"):
-                    return redirect(url_for("index", error=f"Port {form['ws_port']} is already used by '{other_config.get('name')}'", edit=edit_id or "new"))
+                    return redirect(url_for("configurations", error=f"Port {form['ws_port']} is already used by '{other_config.get('name')}'", edit=edit_id or "new"))
             if form["tls_enabled"] and other_config.get("ws_enabled"):
                 if form["tls_port"] == other_config.get("ws_port"):
-                    return redirect(url_for("index", error=f"Port {form['tls_port']} is already used by '{other_config.get('name')}'", edit=edit_id or "new"))
+                    return redirect(url_for("configurations", error=f"Port {form['tls_port']} is already used by '{other_config.get('name')}'", edit=edit_id or "new"))
 
         existing = _find_config(store, form["id"])
         if existing:
@@ -254,11 +346,11 @@ def create_app() -> Flask:
         write_config(config)
         _save_store(store)
         start_xray()
-        return redirect(url_for("index", message="Config saved and Xray restarted.") + "#configs")
+        return redirect(url_for("configurations", message="Config saved and Xray restarted."))
 
     @app.route("/new")
     def new_config():
-        return redirect(url_for("index", edit="new"))
+        return redirect(url_for("configurations", edit="new"))
 
     @app.route("/delete/<config_id>", methods=["POST"])
     def delete_config(config_id: str):
@@ -266,7 +358,7 @@ def create_app() -> Flask:
         original_len = len(store.get("configs", []))
 
         if original_len <= 1:
-            return redirect(url_for("index", error="Cannot delete the last configuration. At least one config must exist.") + "#configs")
+            return redirect(url_for("configurations", error="Cannot delete the last configuration. At least one config must exist."))
 
         store["configs"] = [c for c in store.get("configs", []) if c.get("id") != config_id]
         if len(store["configs"]) < original_len:
@@ -275,15 +367,15 @@ def create_app() -> Flask:
             write_config(config)
             _save_store(store)
             start_xray()
-            return redirect(url_for("index", message="Config deleted.") + "#configs")
-        return redirect(url_for("index", error="Config not found.") + "#configs")
+            return redirect(url_for("configurations", message="Config deleted."))
+        return redirect(url_for("configurations", error="Config not found."))
 
     @app.route("/toggle/<config_id>", methods=["POST"])
     def toggle(config_id: str):
         store = _load_store()
         item = _find_config(store, config_id)
         if not item:
-            return redirect(url_for("index", error="Config not found.") + "#configs")
+            return redirect(url_for("configurations", error="Config not found."))
 
         item["enabled"] = not item.get("enabled", True)
         ensure_dirs()
@@ -292,22 +384,22 @@ def create_app() -> Flask:
         write_config(config)
         _save_store(store)
         start_xray()
-        return redirect(url_for("index", message=f"Config {'enabled' if item['enabled'] else 'disabled'}.") + "#configs")
+        return redirect(url_for("configurations", message=f"Config {'enabled' if item['enabled'] else 'disabled'}."))
 
     @app.route("/restart", methods=["POST"])
     def restart():
         start_xray()
-        return redirect(url_for("index", message="Xray restarted."))
+        return redirect(url_for("dashboard", message="Xray restarted."))
 
     @app.route("/xray/switch", methods=["POST"])
     def switch_xray():
         version_key = request.form.get("xray_version", "").strip()
         if not version_key:
-            return redirect(url_for("index", error="Select an Xray core version.") + "#settings")
+            return redirect(url_for("settings", error="Select an Xray core version."))
         ok, msg = maybe_install_and_switch(version_key)
         if ok:
-            return redirect(url_for("index", message=msg) + "#settings")
-        return redirect(url_for("index", error=msg) + "#settings")
+            return redirect(url_for("settings", message=msg))
+        return redirect(url_for("settings", error=msg))
 
     @app.route("/status")
     def status():
