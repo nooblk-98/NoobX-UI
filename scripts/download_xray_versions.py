@@ -74,6 +74,8 @@ def download_versions(versions: list[str], versions_dir: Path) -> None:
 
 
 def main() -> None:
+    only_default = "--only-default" in sys.argv
+
     versions_file = Path("/opt/xray/versions.json")
     versions_dir = Path("/opt/xray/versions")
     versions_dir.mkdir(parents=True, exist_ok=True)
@@ -86,6 +88,9 @@ def main() -> None:
     if not versions:
         print("No versions configured.", file=sys.stderr)
         sys.exit(1)
+
+    if only_default:
+        versions = versions[:1]
 
     download_versions(versions, versions_dir)
 
