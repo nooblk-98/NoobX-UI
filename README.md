@@ -1,64 +1,148 @@
-# NoobX-UI - Xray Dashboard
+# NoobX-UI — Xray Dashboard
 
-A modern web UI for managing Xray VPN configurations with real-time status monitoring and easy configuration management.
+A modern web UI for managing Xray-core VPN configurations with real-time monitoring, live traffic stats, log viewer, and one-command Docker deployment.
 
-## Quick start
+---
 
-1. Edit `docker-compose-live.yml` and set your domain:
-```yaml
-environment:
-  - UI_PORT=8088
-  - XRAY_DOMAIN=yourdomain.com
-```
+## Deployment
 
-2. Start the server:
+### Option 1 — Docker Run (single command)
+
 ```bash
-docker compose up -d --build
+docker run -d \
+  --name noobx-ui \
+  --restart unless-stopped \
+  -p 8088:8088 \
+  -v noobx-data:/data \
+  -e XRAY_DOMAIN=yourdomain.com \
+  -e UI_PORT=8088 \
+  lahiru98s/noobx-ui:latest
 ```
 
-Open the UI at:
+Open the UI at `http://your-server-ip:8088`
 
-- `http://localhost:8088`
+#### With authentication enabled
+
+```bash
+docker run -d \
+  --name noobx-ui \
+  --restart unless-stopped \
+  -p 8088:8088 \
+  -v noobx-data:/data \
+  -e XRAY_DOMAIN=yourdomain.com \
+  -e UI_USERNAME=admin \
+  -e UI_PASSWORD=yourpassword \
+  lahiru98s/noobx-ui:latest
+```
+
+#### Using GHCR image
+
+```bash
+docker run -d \
+  --name noobx-ui \
+  --restart unless-stopped \
+  -p 8088:8088 \
+  -v noobx-data:/data \
+  -e XRAY_DOMAIN=yourdomain.com \
+  ghcr.io/nooblk-98/noobx-ui:latest
+```
+
+---
+
+### Option 2 — Docker Compose
+
+Create a `docker-compose.yml`:
+
+```yaml
+services:
+  noobx-ui:
+    image: lahiru98s/noobx-ui:latest
+    container_name: noobx-ui
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    volumes:
+      - noobx-data:/data
+    environment:
+      - XRAY_DOMAIN=yourdomain.com
+      - UI_PORT=8088
+      # Optional: enable login protection
+      # - UI_USERNAME=admin
+      # - UI_PASSWORD=yourpassword
+
+volumes:
+  noobx-data:
+```
+
+Then run:
+
+```bash
+docker compose up -d
+```
+
+Pull latest image and restart:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+---
+
+## Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `XRAY_DOMAIN` | `example.com` | Your domain / SNI for Xray configs |
+| `UI_PORT` | `8088` | Web UI port |
+| `UI_USERNAME` | `admin` | Login username (auth disabled if `UI_PASSWORD` not set) |
+| `UI_PASSWORD` | _(unset)_ | Login password — enables auth when set |
+| `UI_PASSWORD_HASH` | _(unset)_ | SHA-256 hash of password (alternative to plain `UI_PASSWORD`) |
+| `XRAY_VERSIONS_CONFIG` | `/opt/xray/versions.json` | Path to versions list JSON |
+| `XRAY_STABLE_VERSIONS` | _(unset)_ | Comma-separated version list override |
+
+---
 
 ## Features
 
-- **Dashboard** - Real-time monitoring of Xray engine status, CPU usage, memory, and transfer speeds
-- **Configurations** - Create, edit, enable/disable multiple Xray inbound configurations
-- **Web UI** - Clean Material Design interface with dark mode
-- **Port Management** - Prevent port conflicts between configurations
-- **Self-signed TLS** - Automatic certificate generation
-- **Docker Ready** - One-command deployment with Docker Compose
+- **Dashboard** — Live CPU, memory, disk, upload/download gauges + traffic history chart
+- **Configurations** — Create, edit, enable/disable multiple Xray inbound configs (VLESS/VMESS, WS/TLS)
+- **QR Code sharing** — One-click QR and copy for client import URLs
+- **Log Viewer** — Live-tail access and error logs with SSE streaming
+- **Backup & Restore** — Export/import all configs as JSON
+- **Config Validation** — Run Xray's built-in `--test` against active config
+- **Version Switcher** — Switch Xray core versions with live download progress bar
+- **Auto-restart watchdog** — Automatically restarts Xray if it crashes
+- **Auth protection** — Optional username/password login page
+- **Light/Dark theme** — Toggle from Settings
+- **Docker Healthcheck** — `/healthz` endpoint wired into `HEALTHCHECK`
+- **Multi-arch** — `linux/amd64` and `linux/arm64` images
 
-## Screenshots
+---
 
-### Dashboard
-View real-time status, connection info, and system metrics.
+## Data & Certificates
 
-![Dashboard](./images/dash.png)
+All runtime data is stored in `/data` inside the container (mapped to the `noobx-data` volume):
 
-### Configurations
-Manage multiple Xray configurations easily.
+```
+/data/
+  config.json        # Active Xray config
+  configs.json       # UI config store
+  certs/             # Auto-generated self-signed TLS certs
+  logs/              # Xray access and error logs
+  xray.pid           # Xray process ID
+```
 
-![Configurations](./images/configs.png)
+Self-signed certificates are generated automatically on first run. Replace `/data/certs/cert.pem` and `/data/certs/key.pem` with your own for production.
 
-## What you get
+---
 
-- Modern web UI to manage Xray configurations
-- Status page showing running state and active connections
-- Real-time system monitoring (CPU, memory, traffic)
-- Self-signed TLS certs generated on first run in `/data/certs`
-- Port conflict detection between configs
+## Ports
 
+| Port | Purpose |
+|---|---|
+| `8088` | Web UI |
+| Configured per-inbound | Xray proxy (WS / WS+TLS) |
 
+---
 
-## Configuration
-
-Edit these in `docker-compose.yml` under `environment`:
-
-- `XRAY_DOMAIN` - Your domain name (default: `example.com`)
-- `UI_PORT` - Web UI port (default: `8088`)
-
-## Notes
-
-- Port `8088` is exposed for the web UI
-- Developed by [nooblk](https://github.com/nooblk-98)
+## Developed by [nooblk](https://github.com/nooblk-98)
