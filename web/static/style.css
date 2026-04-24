@@ -1972,7 +1972,20 @@ a {
 .dash-gauges-card .gauges-grid {
   grid-template-columns: repeat(4, 1fr);
   margin: 0;
-  gap: 12px;
+  gap: 8px;
+}
+
+.dash-gauges-card .gauge-container {
+  padding: 12px 8px 10px;
+  overflow: hidden;
+}
+
+.dash-gauges-card .gauge-container canvas {
+  width: 100% !important;
+  height: auto !important;
+  max-width: 140px;
+  display: block;
+  margin: 0 auto;
 }
 
 .dash-card-header {

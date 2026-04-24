@@ -73,21 +73,21 @@
               <div class="dash-card-header"><i class="material-icons">monitor_heart</i> System Metrics</div>
               <div class="gauges-grid">
                 <div class="gauge-container">
-                  <canvas id="cpuGauge" width="160" height="160"></canvas>
+                  <canvas id="cpuGauge" width="140" height="140"></canvas>
                   <div class="gauge-label">CPU Load</div>
                 </div>
                 <div class="gauge-container">
-                  <canvas id="memGauge" width="160" height="160"></canvas>
+                  <canvas id="memGauge" width="140" height="140"></canvas>
                   <div class="gauge-label">Memory</div>
                   <div class="gauge-sublabel" id="mem-detail">{{ status.sys_info.mem_used_str }} / {{ status.sys_info.mem_total_str }}</div>
                 </div>
                 <div class="gauge-container">
-                  <canvas id="uploadGauge" width="160" height="160"></canvas>
+                  <canvas id="uploadGauge" width="140" height="140"></canvas>
                   <div class="gauge-label">Upload</div>
                   <div class="gauge-sublabel" id="up-speed-label">{{ status.up_speed }}</div>
                 </div>
                 <div class="gauge-container">
-                  <canvas id="downloadGauge" width="160" height="160"></canvas>
+                  <canvas id="downloadGauge" width="140" height="140"></canvas>
                   <div class="gauge-label">Download</div>
                   <div class="gauge-sublabel" id="down-speed-label">{{ status.down_speed }}</div>
                 </div>
