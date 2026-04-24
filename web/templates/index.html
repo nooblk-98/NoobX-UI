@@ -31,67 +31,148 @@
         {% endif %}
 
         <!-- DASHBOARD SECTION -->
-        <section id="section-dashboard" class="content-section {% if page == 'dashboard' %}active{% endif %}"">
-          <div class="info-cards-grid">
-            <div class="info-card">
-              <div class="info-card-icon"><i class="material-icons">verified</i></div>
-              <div class="info-card-content">
-                <div class="info-card-label">Xray Version</div>
-                <div class="info-card-value">{{ status.xray_version }}</div>
+        <section id="section-dashboard" class="content-section {% if page == 'dashboard' %}active{% endif %}">
+
+          <!-- Status Cards Row -->
+          <div class="dash-stat-grid">
+            <div class="dash-stat-card dash-stat-card--primary">
+              <div class="dash-stat-icon"><i class="material-icons">verified</i></div>
+              <div class="dash-stat-body">
+                <div class="dash-stat-label">Xray Version</div>
+                <div class="dash-stat-value">{{ status.xray_version }}</div>
               </div>
             </div>
-            <div class="info-card">
-              <div class="info-card-icon"><i class="material-icons">{{ 'check_circle' if status.running else 'error'
-                  }}</i></div>
-              <div class="info-card-content">
-                <div class="info-card-label">Engine Status</div>
-                <div class="info-card-value">{{ 'Running' if status.running else 'Stopped' }}</div>
+            <div class="dash-stat-card {% if status.running %}dash-stat-card--success{% else %}dash-stat-card--error{% endif %}">
+              <div class="dash-stat-icon"><i class="material-icons">{{ 'check_circle' if status.running else 'cancel' }}</i></div>
+              <div class="dash-stat-body">
+                <div class="dash-stat-label">Engine Status</div>
+                <div class="dash-stat-value">{{ 'Running' if status.running else 'Stopped' }}</div>
               </div>
             </div>
-            <div class="info-card">
-              <div class="info-card-icon"><i class="material-icons">wifi_tethering</i></div>
-              <div class="info-card-content">
-                <div class="info-card-label">Active Configs</div>
-                <div class="info-card-value">{{ active_count }}</div>
+            <div class="dash-stat-card dash-stat-card--info">
+              <div class="dash-stat-icon"><i class="material-icons">dns</i></div>
+              <div class="dash-stat-body">
+                <div class="dash-stat-label">Active Configs</div>
+                <div class="dash-stat-value">{{ active_count }}</div>
+              </div>
+            </div>
+            <div class="dash-stat-card dash-stat-card--warn">
+              <div class="dash-stat-icon"><i class="material-icons">schedule</i></div>
+              <div class="dash-stat-body">
+                <div class="dash-stat-label">Uptime</div>
+                <div class="dash-stat-value" id="dash-uptime">{{ status.sys_info.uptime_str }}</div>
               </div>
             </div>
           </div>
 
-          <h5 class="section-title">System Metrics</h5>
-          <div class="gauges-grid">
-            <div class="gauge-container">
-              <div class="gauge-canvas-wrapper">
-                <canvas id="cpuGauge" width="180" height="180"></canvas>
+          <!-- Metrics Row -->
+          <div class="dash-metrics-row">
+
+            <!-- Gauges -->
+            <div class="dash-gauges-card mdc-card">
+              <div class="dash-card-header"><i class="material-icons">monitor_heart</i> System Metrics</div>
+              <div class="gauges-grid">
+                <div class="gauge-container">
+                  <canvas id="cpuGauge" width="160" height="160"></canvas>
+                  <div class="gauge-label">CPU Load</div>
+                </div>
+                <div class="gauge-container">
+                  <canvas id="memGauge" width="160" height="160"></canvas>
+                  <div class="gauge-label">Memory</div>
+                  <div class="gauge-sublabel" id="mem-detail">{{ status.sys_info.mem_used_str }} / {{ status.sys_info.mem_total_str }}</div>
+                </div>
+                <div class="gauge-container">
+                  <canvas id="uploadGauge" width="160" height="160"></canvas>
+                  <div class="gauge-label">Upload</div>
+                  <div class="gauge-sublabel" id="up-speed-label">{{ status.up_speed }}</div>
+                </div>
+                <div class="gauge-container">
+                  <canvas id="downloadGauge" width="160" height="160"></canvas>
+                  <div class="gauge-label">Download</div>
+                  <div class="gauge-sublabel" id="down-speed-label">{{ status.down_speed }}</div>
+                </div>
               </div>
-              <div class="gauge-label">CPU Usage</div>
             </div>
-            <div class="gauge-container">
-              <div class="gauge-canvas-wrapper">
-                <canvas id="memGauge" width="180" height="180"></canvas>
+
+            <!-- Disk + Net summary -->
+            <div class="dash-side-col">
+              <div class="mdc-card dash-mini-card">
+                <div class="dash-card-header"><i class="material-icons">storage</i> Disk Usage</div>
+                <div class="dash-disk-pct" id="disk-pct">{{ status.sys_info.disk_pct }}%</div>
+                <div class="dash-progress-track">
+                  <div class="dash-progress-bar dash-progress-bar--disk" id="disk-bar" style="width:{{ status.sys_info.disk_pct }}%"></div>
+                </div>
+                <div class="dash-disk-detail" id="disk-detail">{{ status.sys_info.disk_used_str }} / {{ status.sys_info.disk_total_str }}</div>
               </div>
-              <div class="gauge-label">Memory Usage</div>
-            </div>
-            <div class="gauge-container">
-              <div class="gauge-canvas-wrapper">
-                <canvas id="uploadGauge" width="180" height="180"></canvas>
+              <div class="mdc-card dash-mini-card">
+                <div class="dash-card-header"><i class="material-icons">swap_vert</i> Network</div>
+                <div class="dash-net-row">
+                  <div class="dash-net-item">
+                    <i class="material-icons" style="color:#bb86fc;font-size:18px;">arrow_upward</i>
+                    <span class="dash-net-label">Upload</span>
+                    <span class="dash-net-value" id="net-up">{{ status.up_speed }}</span>
+                  </div>
+                  <div class="dash-net-divider"></div>
+                  <div class="dash-net-item">
+                    <i class="material-icons" style="color:#00cfff;font-size:18px;">arrow_downward</i>
+                    <span class="dash-net-label">Download</span>
+                    <span class="dash-net-value" id="net-down">{{ status.down_speed }}</span>
+                  </div>
+                </div>
               </div>
-              <div class="gauge-label">Upload</div>
-            </div>
-            <div class="gauge-container">
-              <div class="gauge-canvas-wrapper">
-                <canvas id="downloadGauge" width="180" height="180"></canvas>
-              </div>
-              <div class="gauge-label">Download</div>
             </div>
           </div>
 
-          <div class="mdc-card"
-            style="margin-top: 24px; padding: 16px; border: 1px solid var(--mdc-border-color); box-shadow: none;">
-            <h5 class="section-title" style="margin-top: 0;">Traffic History (KB/s)</h5>
-            <div style="height: 300px; width: 100%;">
+          <!-- Traffic Chart -->
+          <div class="mdc-card dash-chart-card">
+            <div class="dash-card-header"><i class="material-icons">show_chart</i> Traffic History <span class="dash-chart-hint">(KB/s, last 30s)</span></div>
+            <div class="dash-chart-wrap">
               <canvas id="trafficChart"></canvas>
             </div>
           </div>
+
+          <!-- Per-Config Traffic Table -->
+          {% if configs %}
+          <div class="mdc-card dash-traffic-card">
+            <div class="dash-card-header"><i class="material-icons">people</i> Per-Config Traffic</div>
+            <table class="dash-traffic-table">
+              <thead>
+                <tr>
+                  <th>Config</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Usage</th>
+                  <th>Speed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in configs %}
+                {% if item.enabled %}
+                {% if item.ws_enabled %}
+                <tr class="dash-traffic-row" data-email="{{ item.ws_email }}" data-port="{{ item.ws_port }}" data-type="ws">
+                  <td class="dash-traffic-name">{{ item.name }}</td>
+                  <td><span class="dash-badge dash-badge--ws">WS</span></td>
+                  <td><span class="dash-status-dot grey" id="dot-ws-{{ item.id }}"></span></td>
+                  <td class="dash-traffic-usage" id="usage-ws-{{ item.ws_email }}">—</td>
+                  <td class="dash-traffic-speed" id="speed-ws-{{ item.ws_email }}">—</td>
+                </tr>
+                {% endif %}
+                {% if item.tls_enabled %}
+                <tr class="dash-traffic-row" data-email="{{ item.tls_email }}" data-port="{{ item.tls_port }}" data-type="tls">
+                  <td class="dash-traffic-name">{{ item.name }}</td>
+                  <td><span class="dash-badge dash-badge--tls">TLS</span></td>
+                  <td><span class="dash-status-dot grey" id="dot-tls-{{ item.id }}"></span></td>
+                  <td class="dash-traffic-usage" id="usage-tls-{{ item.tls_email }}">—</td>
+                  <td class="dash-traffic-speed" id="speed-tls-{{ item.tls_email }}">—</td>
+                </tr>
+                {% endif %}
+                {% endif %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% endif %}
+
         </section>
 
         <!-- CONFIGS SECTION -->

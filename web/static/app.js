@@ -215,57 +215,94 @@ async function pollStatus() {
     const res = await fetch('/status');
     const data = await res.json();
 
-    let cpuValue = 0;
-    let memValue = 0;
-    if (data.sys_info) {
-      cpuValue = parseFloat(data.sys_info.cpu) || 0;
-      memValue = parseFloat(data.sys_info.mem) || 0;
-    }
+    const si = data.sys_info || {};
+    const cpuValue = parseFloat(si.cpu) || 0;
+    const memValue = parseFloat(si.mem) || 0;
 
     updateGauge('cpuGauge', Math.min(cpuValue, 100), 'cpu');
     updateGauge('memGauge', memValue, 'mem');
     updateGauge('uploadGauge', Math.min((data.up_raw / 100), 100), 'upload');
     updateGauge('downloadGauge', Math.min((data.down_raw / 100), 100), 'download');
 
+    // Gauge sublabels
+    const memDetail = document.getElementById('mem-detail');
+    if (memDetail && si.mem_used_str) memDetail.textContent = `${si.mem_used_str} / ${si.mem_total_str}`;
+    const upLabel = document.getElementById('up-speed-label');
+    if (upLabel) upLabel.textContent = data.up_speed || '';
+    const downLabel = document.getElementById('down-speed-label');
+    if (downLabel) downLabel.textContent = data.down_speed || '';
+
+    // Disk
+    const diskPct = document.getElementById('disk-pct');
+    const diskBar = document.getElementById('disk-bar');
+    const diskDetail = document.getElementById('disk-detail');
+    if (si.disk_pct !== undefined) {
+      if (diskPct) diskPct.textContent = si.disk_pct + '%';
+      if (diskBar) diskBar.style.width = si.disk_pct + '%';
+      if (diskDetail) diskDetail.textContent = `${si.disk_used_str} / ${si.disk_total_str}`;
+    }
+
+    // Network cards
+    const netUp = document.getElementById('net-up');
+    const netDown = document.getElementById('net-down');
+    if (netUp) netUp.textContent = data.up_speed || '—';
+    if (netDown) netDown.textContent = data.down_speed || '—';
+
+    // Uptime
+    const uptimeEl = document.getElementById('dash-uptime');
+    if (uptimeEl && si.uptime_str) uptimeEl.textContent = si.uptime_str;
+
+    // Traffic chart
     if (trafficChart) {
-      upData.shift();
-      upData.push(data.up_raw);
-      downData.shift();
-      downData.push(data.down_raw);
+      upData.shift(); upData.push(data.up_raw);
+      downData.shift(); downData.push(data.down_raw);
       trafficChart.update();
     }
 
+    // Per-config traffic table
+    if (data.xray_stats) {
+      document.querySelectorAll('.dash-traffic-row').forEach(row => {
+        const email = row.getAttribute('data-email');
+        const port = parseInt(row.getAttribute('data-port'));
+        const type = row.getAttribute('data-type');
+        const stats = data.xray_stats[email];
+        const usageEl = row.querySelector('.dash-traffic-usage');
+        const speedEl = row.querySelector('.dash-traffic-speed');
+        const dotEl = row.querySelector('.dash-status-dot');
+        const active = data.active_ports && data.active_ports.includes(port);
+        if (dotEl) { dotEl.className = 'dash-status-dot ' + (active ? 'green' : 'grey'); }
+        if (stats) {
+          if (usageEl) usageEl.textContent = stats.total_str;
+          if (speedEl) speedEl.textContent = stats.speed_str;
+        }
+      });
+    }
+
+    // Config cards live status (configurations page)
     if (data.active_ports) {
       document.querySelectorAll('.config-card').forEach(card => {
         const wsPortStr = card.getAttribute('data-ws-port');
         const tlsPortStr = card.getAttribute('data-tls-port');
         const enableWs = card.getAttribute('data-ws-en') === 'True';
         const enableTls = card.getAttribute('data-tls-en') === 'True';
-
         let isActive = false;
-        if (enableWs && wsPortStr && data.active_ports.includes(parseInt(wsPortStr))) { isActive = true; }
-        if (enableTls && tlsPortStr && data.active_ports.includes(parseInt(tlsPortStr))) { isActive = true; }
-
+        if (enableWs && wsPortStr && data.active_ports.includes(parseInt(wsPortStr))) isActive = true;
+        if (enableTls && tlsPortStr && data.active_ports.includes(parseInt(tlsPortStr))) isActive = true;
         const statusDot = card.querySelector('.config-live-status');
         if (statusDot) {
-          if (isActive) {
-            statusDot.innerHTML = '<span class="status-dot green"></span><span class="status-text success-text">Active Link</span>';
-          } else {
-            statusDot.innerHTML = '<span class="status-dot grey"></span><span class="status-text text-muted">Idle</span>';
-          }
+          statusDot.innerHTML = isActive
+            ? '<span class="status-dot green"></span><span class="status-text success-text">Active Link</span>'
+            : '<span class="status-dot grey"></span><span class="status-text text-muted">Idle</span>';
         }
-
         const wsEmailStr = card.getAttribute('data-ws-email');
         const tlsEmailStr = card.getAttribute('data-tls-email');
         const usageSpan = card.querySelector('.config-usage');
         if (usageSpan && data.xray_stats) {
           let usageText = '';
-          if (enableWs && wsEmailStr && data.xray_stats[wsEmailStr]) {
-            usageText += `  WS: ${data.xray_stats[wsEmailStr].total_str} (${data.xray_stats[wsEmailStr].speed_str}) `;
-          }
-          if (enableTls && tlsEmailStr && data.xray_stats[tlsEmailStr]) {
-            usageText += `  TLS: ${data.xray_stats[tlsEmailStr].total_str} (${data.xray_stats[tlsEmailStr].speed_str})`;
-          }
+          if (enableWs && wsEmailStr && data.xray_stats[wsEmailStr])
+            usageText += `WS: ${data.xray_stats[wsEmailStr].total_str} `;
+          if (enableTls && tlsEmailStr && data.xray_stats[tlsEmailStr])
+            usageText += `TLS: ${data.xray_stats[tlsEmailStr].total_str}`;
           usageSpan.textContent = usageText.trim();
         }
       });

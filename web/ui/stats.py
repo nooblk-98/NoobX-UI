@@ -14,28 +14,83 @@ _last_stats_time = 0.0
 
 
 def get_sys_info() -> dict:
-    info = {"cpu": "0.00", "mem": "0.0%"}
-    if platform.system() == "Linux":
-        try:
-            with open("/proc/loadavg", "r") as f:
-                info["cpu"] = f.read().split()[0]
-            with open("/proc/meminfo", "r") as f:
-                lines = f.readlines()
-                total = None
-                available = None
-                for line in lines:
-                    if line.startswith("MemTotal:"):
-                        total = int(line.split()[1])
-                    elif line.startswith("MemAvailable:"):
-                        available = int(line.split()[1])
-                    if total is not None and available is not None:
-                        break
-                if total:
-                    used = total - (available or 0)
-                    info["mem"] = f"{(used / total) * 100:.1f}%"
-        except Exception:
-            pass
+    info = {
+        "cpu": "0.00",
+        "mem": "0.0",
+        "mem_used_str": "0 MB",
+        "mem_total_str": "0 MB",
+        "disk_pct": "0.0",
+        "disk_used_str": "0 GB",
+        "disk_total_str": "0 GB",
+        "uptime_str": "—",
+    }
+    if platform.system() != "Linux":
+        return info
+    try:
+        with open("/proc/loadavg", "r") as f:
+            info["cpu"] = f.read().split()[0]
+    except Exception:
+        pass
+    try:
+        with open("/proc/meminfo", "r") as f:
+            lines = f.readlines()
+        mem = {}
+        for line in lines:
+            for key in ("MemTotal", "MemAvailable"):
+                if line.startswith(f"{key}:"):
+                    mem[key] = int(line.split()[1])
+        if "MemTotal" in mem and "MemAvailable" in mem:
+            total = mem["MemTotal"]
+            used = total - mem["MemAvailable"]
+            info["mem"] = f"{(used / total) * 100:.1f}"
+            info["mem_used_str"] = _fmt_kb(used)
+            info["mem_total_str"] = _fmt_kb(total)
+    except Exception:
+        pass
+    try:
+        import os
+        st = os.statvfs("/")
+        total_b = st.f_frsize * st.f_blocks
+        free_b = st.f_frsize * st.f_bavail
+        used_b = total_b - free_b
+        if total_b > 0:
+            info["disk_pct"] = f"{(used_b / total_b) * 100:.1f}"
+            info["disk_used_str"] = _fmt_bytes(used_b)
+            info["disk_total_str"] = _fmt_bytes(total_b)
+    except Exception:
+        pass
+    try:
+        with open("/proc/uptime", "r") as f:
+            secs = float(f.read().split()[0])
+        info["uptime_str"] = _fmt_uptime(int(secs))
+    except Exception:
+        pass
     return info
+
+
+def _fmt_kb(kb: int) -> str:
+    if kb < 1024:
+        return f"{kb} KB"
+    if kb < 1024 * 1024:
+        return f"{kb / 1024:.1f} MB"
+    return f"{kb / 1024 / 1024:.1f} GB"
+
+
+def _fmt_bytes(b: int) -> str:
+    if b < 1024 ** 3:
+        return f"{b / 1024 ** 2:.1f} MB"
+    return f"{b / 1024 ** 3:.1f} GB"
+
+
+def _fmt_uptime(secs: int) -> str:
+    d, rem = divmod(secs, 86400)
+    h, rem = divmod(rem, 3600)
+    m = rem // 60
+    if d:
+        return f"{d}d {h}h {m}m"
+    if h:
+        return f"{h}h {m}m"
+    return f"{m}m"
 
 
 def get_net_speed() -> dict:
