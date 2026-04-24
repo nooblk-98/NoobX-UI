@@ -208,6 +208,8 @@
         <section id="section-settings" class="content-section {% if page == 'settings' %}active{% endif %}">
           <h5 class="section-title">System Settings</h5>
           <div class="settings-grid">
+
+            <!-- Interface Preferences -->
             <div class="mdc-card settings-card">
               <h6 class="settings-subtitle">Interface Preferences</h6>
               <div class="settings-row">
@@ -217,9 +219,7 @@
                 </div>
                 <label class="mdc-switch">
                   <input type="checkbox" class="mdc-switch__native-control" role="switch" id="theme-toggle">
-                  <div class="mdc-switch__background">
-                    <div class="mdc-switch__knob"></div>
-                  </div>
+                  <div class="mdc-switch__background"><div class="mdc-switch__knob"></div></div>
                 </label>
               </div>
               <div class="divider"></div>
@@ -230,57 +230,12 @@
                 </div>
                 <label class="mdc-switch">
                   <input type="checkbox" class="mdc-switch__native-control" role="switch" id="motion-toggle">
-                  <div class="mdc-switch__background">
-                    <div class="mdc-switch__knob"></div>
-                  </div>
+                  <div class="mdc-switch__background"><div class="mdc-switch__knob"></div></div>
                 </label>
               </div>
             </div>
 
-            <div class="mdc-card settings-card">
-              <h6 class="settings-subtitle">Xray Core</h6>
-              <div class="settings-row">
-                <div class="settings-row-info">
-                  <div class="settings-row-title">Current Version</div>
-                  <div class="settings-row-help">{{ status.xray_version }} &bull; {{ status.xray_bin }}</div>
-                </div>
-              </div>
-              <div class="divider"></div>
-              {% if xray_versions %}
-              <form method="post" action="/xray/switch" class="settings-row settings-row--form">
-                <div class="settings-row-info">
-                  <div class="settings-row-title">Switch Version</div>
-                  <div class="settings-row-help">Select from the stable list. If not installed, it will be downloaded and activated.</div>
-                </div>
-                <div class="settings-row-control settings-select-wrap">
-                  <select id="xray-version" name="xray_version" class="settings-select" aria-label="Xray version">
-                    {% for v in xray_versions %}
-                    <option value="{{ v.key }}" {% if xray_current_key == v.key %}selected{% endif %}>
-                      {{ v.version }}{% if not v.installed %} (will download){% endif %}
-                    </option>
-                    {% endfor %}
-                  </select>
-                  <i class="material-icons settings-select-arrow">expand_more</i>
-                </div>
-                <button type="submit" class="mdc-button mdc-button--raised mdc-button--primary">
-                  <i class="material-icons mdc-button__icon">upgrade</i>
-                  <span class="mdc-button__label">Switch Core</span>
-                </button>
-              </form>
-              <p class="helper-text">
-                <i class="material-icons">info</i> Add binaries in
-                <code>/data/xray/versions/&lt;version&gt;/xray</code> or alongside <code>xray-*</code> in
-                <code>/usr/local/bin/</code>. Configure stable list with <code>XRAY_VERSIONS_CONFIG</code> or
-                <code>XRAY_STABLE_VERSIONS</code>.
-              </p>
-              {% else %}
-              <p class="helper-text">
-                <i class="material-icons">info</i> No stable versions configured. Set
-                <code>XRAY_VERSIONS_CONFIG</code> or <code>XRAY_STABLE_VERSIONS</code> to show options.
-              </p>
-              {% endif %}
-            </div>
-
+            <!-- Live Metrics -->
             <div class="mdc-card settings-card">
               <h6 class="settings-subtitle">Live Metrics</h6>
               <div class="settings-row">
@@ -290,9 +245,7 @@
                 </div>
                 <label class="mdc-switch">
                   <input type="checkbox" class="mdc-switch__native-control" role="switch" id="refresh-toggle">
-                  <div class="mdc-switch__background">
-                    <div class="mdc-switch__knob"></div>
-                  </div>
+                  <div class="mdc-switch__background"><div class="mdc-switch__knob"></div></div>
                 </label>
               </div>
               <div class="divider"></div>
@@ -312,6 +265,45 @@
               </div>
             </div>
 
+            <!-- Xray Core -->
+            <div class="mdc-card settings-card">
+              <h6 class="settings-subtitle">Xray Core</h6>
+              <div class="settings-row">
+                <div class="settings-row-info">
+                  <div class="settings-row-title">Current Version</div>
+                  <div class="settings-row-help">{{ status.xray_version }} &bull; {{ status.xray_bin }}</div>
+                </div>
+              </div>
+              <div class="divider"></div>
+              {% if xray_versions %}
+              <form method="post" action="/xray/switch">
+                <div class="settings-row-title" style="margin-bottom:8px;">Switch Version</div>
+                <div class="settings-row-help" style="margin-bottom:12px;">Select a version. Uninstalled ones will be downloaded automatically.</div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                  <div class="settings-select-wrap" style="flex:1;min-width:140px;">
+                    <select id="xray-version" name="xray_version" class="settings-select" aria-label="Xray version">
+                      {% for v in xray_versions %}
+                      <option value="{{ v.key }}" {% if xray_current_key == v.key %}selected{% endif %}>
+                        {{ v.version }}{% if not v.installed %} ↓{% endif %}
+                      </option>
+                      {% endfor %}
+                    </select>
+                    <i class="material-icons settings-select-arrow">expand_more</i>
+                  </div>
+                  <button type="submit" class="mdc-button mdc-button--raised mdc-button--primary" style="flex-shrink:0;">
+                    <i class="material-icons mdc-button__icon">upgrade</i>
+                    <span class="mdc-button__label">Switch</span>
+                  </button>
+                </div>
+              </form>
+              {% else %}
+              <p class="helper-text" style="margin-top:8px;">
+                <i class="material-icons">info</i> Set <code>XRAY_VERSIONS_CONFIG</code> or <code>XRAY_STABLE_VERSIONS</code> to show versions.
+              </p>
+              {% endif %}
+            </div>
+
+            <!-- Service Control -->
             <div class="mdc-card settings-card">
               <h6 class="settings-subtitle">Service Control</h6>
               <div class="actions-row">
@@ -326,19 +318,19 @@
                 </a>
               </div>
               <p class="helper-text mt-3">
-                <i class="material-icons">info</i> Self-signed TLS certificates are generated on first run at
-                <code>/data/certs</code>. Replace them for production use.
+                <i class="material-icons">info</i> Self-signed TLS certificates are auto-generated at <code>/data/certs</code>. Replace for production.
               </p>
             </div>
 
+            <!-- Backup & Restore -->
             <div class="mdc-card settings-card">
               <h6 class="settings-subtitle">Backup & Restore</h6>
               <div class="settings-row">
                 <div class="settings-row-info">
                   <div class="settings-row-title">Export Configs</div>
-                  <div class="settings-row-help">Download all configurations as a JSON backup file.</div>
+                  <div class="settings-row-help">Download all configurations as a JSON file.</div>
                 </div>
-                <a href="/backup/export" class="mdc-button mdc-button--outlined">
+                <a href="/backup/export" class="mdc-button mdc-button--outlined" style="flex-shrink:0;">
                   <i class="material-icons mdc-button__icon">download</i>
                   <span class="mdc-button__label">Export</span>
                 </a>
@@ -350,15 +342,22 @@
                   <div class="settings-row-help">Restore from a previously exported backup. This will overwrite current configs.</div>
                 </div>
                 <form method="post" action="/backup/import" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;">
-                  <input type="file" name="backup_file" accept=".json" class="cfg-input" style="max-width:200px;padding:6px 8px;font-size:0.8rem;" required />
-                  <button type="submit" class="mdc-button mdc-button--raised mdc-button--primary" onclick="return confirm('This will overwrite your current configs. Continue?')">
+              <div class="divider"></div>
+              <div class="settings-row-title" style="margin-bottom:8px;">Import Configs</div>
+              <div class="settings-row-help" style="margin-bottom:12px;">Restore from a backup. This overwrites current configs.</div>
+              <form method="post" action="/backup/import" enctype="multipart/form-data">
+                <div class="backup-import-row">
+                  <input type="file" name="backup_file" accept=".json" class="backup-file-input" required />
+                  <button type="submit" class="mdc-button mdc-button--raised mdc-button--primary"
+                    onclick="return confirm('This will overwrite your current configs. Continue?')" style="width:100%;">
                     <i class="material-icons mdc-button__icon">upload</i>
                     <span class="mdc-button__label">Restore</span>
                   </button>
-                </form>
-              </div>
+                </div>
+              </form>
             </div>
 
+            <!-- Config Validation -->
             <div class="mdc-card settings-card">
               <h6 class="settings-subtitle">Config Validation</h6>
               <div class="settings-row">
@@ -366,14 +365,15 @@
                   <div class="settings-row-title">Validate Current Config</div>
                   <div class="settings-row-help">Run Xray's built-in config test against the active configuration.</div>
                 </div>
-                <button type="button" class="mdc-button mdc-button--outlined" onclick="validateConfig()">
+                <button type="button" class="mdc-button mdc-button--outlined" onclick="validateConfig()" style="flex-shrink:0;">
                   <i class="material-icons mdc-button__icon">rule</i>
                   <span class="mdc-button__label">Validate</span>
                 </button>
               </div>
-              <div id="validate-result" style="display:none;margin-top:12px;padding:10px 14px;border-radius:6px;font-size:0.85rem;font-family:monospace;"></div>
+              <div id="validate-result" style="display:none;margin-top:12px;padding:10px 14px;border-radius:6px;font-size:0.82rem;font-family:monospace;line-height:1.5;"></div>
             </div>
 
+            <!-- System Information -->
             <div class="mdc-card settings-card">
               <h6 class="settings-subtitle">System Information</h6>
               <ul class="info-list">
@@ -382,6 +382,7 @@
                 <li><span class="info-label">Server Time:</span> <span>{{ status.now }}</span></li>
               </ul>
             </div>
+
           </div>
         </section>
       </main>

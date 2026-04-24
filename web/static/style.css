@@ -591,18 +591,24 @@ a {
 /* Settings */
 .settings-card {
   padding: 24px;
+  display: flex;
+  flex-direction: column;
 }
 
 .settings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
 }
 
 .settings-subtitle {
   margin: 0 0 16px;
-  font-size: 1rem;
-  font-weight: 500;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--mdc-theme-text-primary-on-background);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--mdc-border-color);
 }
 
 .settings-row {
@@ -610,43 +616,48 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  min-height: 48px;
 }
 
 .settings-row--form {
   flex-wrap: wrap;
   align-items: flex-start;
+  gap: 12px;
 }
 
 .settings-row--form .settings-row-info {
-  flex: 1 1 220px;
+  flex: 1 1 180px;
 }
 
 .settings-row--form .settings-row-control {
-  flex: 0 1 220px;
+  flex: 0 1 200px;
 }
 
 .settings-row + .settings-row {
-  margin-top: 12px;
+  margin-top: 4px;
 }
 
 .settings-row-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
+  flex: 1;
 }
 
 .settings-row-title {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 500;
 }
 
 .settings-row-help {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: var(--mdc-theme-text-secondary-on-background);
+  line-height: 1.4;
 }
 
 .settings-row-control {
-  min-width: 170px;
+  min-width: 160px;
+  flex-shrink: 0;
 }
 
 .settings-select-wrap {
@@ -673,6 +684,26 @@ a {
   font-size: 18px;
   color: var(--mdc-theme-text-secondary-on-background);
   pointer-events: none;
+}
+
+/* Backup file input */
+.backup-file-input {
+  background: var(--mdc-theme-background);
+  border: 1px solid var(--mdc-border-color);
+  border-radius: 6px;
+  color: var(--mdc-theme-text-primary-on-background);
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  font-family: 'Roboto', sans-serif;
+  width: 100%;
+  cursor: pointer;
+}
+
+.backup-import-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .actions-row {
@@ -1636,6 +1667,10 @@ a {
    RESPONSIVE — Tablet  ≤ 768px
    ═══════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
+
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
 
   /* ── Layout ─────────────────────────────────────────────── */
   .app-layout {
