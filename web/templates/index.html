@@ -318,7 +318,7 @@
                 </a>
               </div>
               <p class="helper-text mt-3">
-                <i class="material-icons">info</i> Self-signed TLS certificates are auto-generated at <code>/data/certs</code>. Replace for production.
+                <i class="material-icons">info</i> Self-signed TLS certificates are auto-generated at <code>/data/certs</code> — replace for production use.
               </p>
             </div>
 
@@ -336,15 +336,8 @@
                 </a>
               </div>
               <div class="divider"></div>
-              <div class="settings-row settings-row--form">
-                <div class="settings-row-info">
-                  <div class="settings-row-title">Import Configs</div>
-                  <div class="settings-row-help">Restore from a previously exported backup. This will overwrite current configs.</div>
-                </div>
-                <form method="post" action="/backup/import" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;">
-              <div class="divider"></div>
-              <div class="settings-row-title" style="margin-bottom:8px;">Import Configs</div>
-              <div class="settings-row-help" style="margin-bottom:12px;">Restore from a backup. This overwrites current configs.</div>
+              <div class="settings-row-title" style="margin-bottom:4px;">Import Configs</div>
+              <div class="settings-row-help" style="margin-bottom:10px;">Restore from a backup. This overwrites current configs.</div>
               <form method="post" action="/backup/import" enctype="multipart/form-data">
                 <div class="backup-import-row">
                   <input type="file" name="backup_file" accept=".json" class="backup-file-input" required />

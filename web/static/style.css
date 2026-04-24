@@ -715,18 +715,24 @@ a {
 }
 
 .helper-text {
-  font-size: 0.875rem;
+  font-size: 0.82rem;
   color: var(--mdc-theme-text-secondary-on-background);
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 6px;
   margin: 0;
-  flex-wrap: wrap;
+  line-height: 1.5;
 }
 
 .helper-text i {
-  font-size: 18px;
-  margin-top: 2px;
+  font-size: 16px;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.helper-text code {
+  display: inline;
+  white-space: nowrap;
 }
 
 .info-list {
