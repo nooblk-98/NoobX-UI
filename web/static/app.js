@@ -1,6 +1,7 @@
 const configsData = window.CONFIGS_DATA || [];
 const defaultsData = window.DEFAULTS_DATA || {};
 let pollIntervalId = null;
+let _netMaxKB = 128; // dynamic ceiling for upload/download gauges (KB/s)
 
 function getThemeVars() {
   const styles = getComputedStyle(document.documentElement);
@@ -219,10 +220,15 @@ async function pollStatus() {
     const cpuValue = parseFloat(si.cpu) || 0;
     const memValue = parseFloat(si.mem) || 0;
 
-    updateGauge('cpuGauge', Math.min(cpuValue, 100), 'cpu');
-    updateGauge('memGauge', memValue, 'mem');
-    updateGauge('uploadGauge', Math.min((data.up_raw / 100), 100), 'upload');
-    updateGauge('downloadGauge', Math.min((data.down_raw / 100), 100), 'download');
+    // Track rolling max for dynamic gauge scaling (in KB/s)
+    _netMaxKB = Math.max(_netMaxKB * 0.95, data.up_raw, data.down_raw, 128);
+    const upPct   = Math.min((data.up_raw   / _netMaxKB) * 100, 100);
+    const downPct = Math.min((data.down_raw / _netMaxKB) * 100, 100);
+
+    updateGauge('cpuGauge',       Math.min(cpuValue, 100), 'cpu');
+    updateGauge('memGauge',       memValue,                'mem');
+    updateGauge('uploadGauge',    upPct,                   'upload');
+    updateGauge('downloadGauge',  downPct,                 'download');
 
     // Gauge sublabels
     const memDetail = document.getElementById('mem-detail');
