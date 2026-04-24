@@ -352,7 +352,7 @@ function setTheme(mode) {
   applyThemeToChart();
   refreshGaugeTheme();
   const favicon = document.getElementById('favicon');
-  if (favicon) favicon.href = isLight ? '/static/icon-light.svg' : '/static/icon-dark.svg';
+  if (favicon) favicon.href = isLight ? '/static/icon-dark.svg' : '/static/icon-light.svg';
 }
 
 function setReducedMotion(enabled) {

@@ -2267,12 +2267,12 @@ a {
   display: block;
 }
 
-/* Dark theme: show dark logo, hide light logo */
-.sidebar-logo--light { display: none; }
-.sidebar-logo--dark  { display: block; }
+/* Dark theme sidebar: use white logo (logo-light.svg) */
+.sidebar-logo--light { display: block; }  /* white version — shows on dark bg */
+.sidebar-logo--dark  { display: none; }   /* dark version — shows on light bg */
 
-.theme-light .sidebar-logo--light { display: block; }
-.theme-light .sidebar-logo--dark  { display: none; }
+.theme-light .sidebar-logo--light { display: none; }
+.theme-light .sidebar-logo--dark  { display: block; }
 
 /* ── Login Page ───────────────────────────────────────────────── */
 .login-wrap {
@@ -2307,11 +2307,12 @@ a {
   display: block;
 }
 
-.login-logo-img--light { display: none; }
-.login-logo-img--dark  { display: block; }
+/* Dark theme login: use white logo */
+.login-logo-img--light { display: block; }  /* white version */
+.login-logo-img--dark  { display: none; }   /* dark version */
 
-.theme-light .login-logo-img--light { display: block; }
-.theme-light .login-logo-img--dark  { display: none; }
+.theme-light .login-logo-img--light { display: none; }
+.theme-light .login-logo-img--dark  { display: block; }
 
 .login-title {
   font-size: 1.4rem;
