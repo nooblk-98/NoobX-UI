@@ -351,6 +351,8 @@ function setTheme(mode) {
   localStorage.setItem('theme', isLight ? 'light' : 'dark');
   applyThemeToChart();
   refreshGaugeTheme();
+  const favicon = document.getElementById('favicon');
+  if (favicon) favicon.href = isLight ? '/static/icon-light.svg' : '/static/icon-dark.svg';
 }
 
 function setReducedMotion(enabled) {

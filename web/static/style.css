@@ -2254,6 +2254,26 @@ a {
   color: var(--mdc-theme-warning);
 }
 
+/* ── Sidebar Logo ────────────────────────────────────────────── */
+.sidebar-logo-link {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.sidebar-logo {
+  width: 100%;
+  max-width: 140px;
+  height: auto;
+  display: block;
+}
+
+/* Dark theme: show dark logo, hide light logo */
+.sidebar-logo--light { display: none; }
+.sidebar-logo--dark  { display: block; }
+
+.theme-light .sidebar-logo--light { display: block; }
+.theme-light .sidebar-logo--dark  { display: none; }
+
 /* ── Login Page ───────────────────────────────────────────────── */
 .login-wrap {
   min-height: 100vh;
@@ -2275,21 +2295,23 @@ a {
   box-shadow: var(--mdc-elevation-8);
 }
 
-.login-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--mdc-theme-primary);
+.login-logo {
+  margin: 0 auto 20px;
   display: flex;
-  align-items: center;
   justify-content: center;
-  margin: 0 auto 16px;
 }
 
-.login-icon i {
-  font-size: 28px;
-  color: #fff;
+.login-logo-img {
+  width: 180px;
+  height: auto;
+  display: block;
 }
+
+.login-logo-img--light { display: none; }
+.login-logo-img--dark  { display: block; }
+
+.theme-light .login-logo-img--light { display: block; }
+.theme-light .login-logo-img--dark  { display: none; }
 
 .login-title {
   font-size: 1.4rem;

@@ -1,6 +1,9 @@
 <aside class="mdc-drawer">
   <div class="mdc-drawer__header">
-    <h3 class="mdc-drawer__title">NoobX-UI</h3>
+    <a href="{{ url_for('dashboard') }}" class="sidebar-logo-link">
+      <img src="/static/logo-dark.svg" alt="NoobX-UI" class="sidebar-logo sidebar-logo--dark" />
+      <img src="/static/logo-light.svg" alt="NoobX-UI" class="sidebar-logo sidebar-logo--light" />
+    </a>
     <h6 class="mdc-drawer__subtitle">{{ status.domain }}</h6>
   </div>
   <div class="mdc-drawer__content">
