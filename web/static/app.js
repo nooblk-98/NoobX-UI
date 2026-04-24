@@ -74,6 +74,12 @@ function drawSegmentedGauge(canvasId, value, color, label) {
 
   ctx.clearRect(0, 0, W, H);
 
+  // Clip to canvas bounds so shadow never bleeds outside
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, W, H);
+  ctx.clip();
+
   const totalTicks = 60;
   const filledTicks = Math.round((value / 100) * totalTicks);
   const isNetwork = (canvasId === 'uploadGauge' || canvasId === 'downloadGauge');
@@ -81,36 +87,34 @@ function drawSegmentedGauge(canvasId, value, color, label) {
   // Scale radii relative to canvas size so gauges fit at any resolution
   const scale = Math.min(W, H) / 180;
   const ringInner = Math.round(62 * scale);
-  const ringOuter = Math.round(84 * scale);
-  const shortOuter = Math.round(79 * scale);
+  const ringOuter = Math.round(78 * scale);
+  const shortOuter = Math.round(73 * scale);
 
+  // Draw empty ticks first (no shadow), then filled ticks on top
   for (let i = 0; i < totalTicks; i++) {
+    if (i < filledTicks) continue;
     const angle = (i / totalTicks) * Math.PI * 2 - Math.PI / 2;
-    const filled = i < filledTicks;
-
-    const innerR = ringInner;
-    const outerR = filled ? ringOuter : shortOuter;
-    const tickLen = outerR - innerR;
-    const tickW = filled ? 3.5 : 2;
-
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(angle);
-
-    if (filled) {
-      ctx.fillStyle = color;
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 14;
-      ctx.fillRect(innerR, -tickW / 2, tickLen, tickW);
-    } else {
-      ctx.shadowBlur = 0;
-      ctx.shadowColor = 'transparent';
-      ctx.fillStyle = themeVars.gaugeEmptyTick;
-      ctx.fillRect(innerR, -tickW / 2, tickLen, tickW);
-    }
+    ctx.fillStyle = themeVars.gaugeEmptyTick;
+    ctx.fillRect(ringInner, -1, shortOuter - ringInner, 2);
     ctx.restore();
   }
 
+  for (let i = 0; i < filledTicks; i++) {
+    const angle = (i / totalTicks) * Math.PI * 2 - Math.PI / 2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 6;
+    ctx.fillRect(ringInner, -1.5, ringOuter - ringInner, 3);
+    ctx.restore();
+  }
+
+  ctx.restore(); // remove clip
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
 
