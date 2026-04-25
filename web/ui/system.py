@@ -60,26 +60,3 @@ def save_manual_cert_paths(cert_src: str, key_src: str) -> tuple[bool, str]:
         return False, f"Failed to save certificates: {e}"
 
 
-def run_certbot(domain: str, email: str) -> tuple[bool, str]:
-    """Run certbot standalone and copy resulting certs. Returns (ok, message)."""
-    if not shutil.which("certbot"):
-        return False, "certbot is not installed or not in PATH."
-    cert_path = CERT_DIR / "cert.pem"
-    key_path = CERT_DIR / "key.pem"
-    cmd = [
-        "certbot", "certonly", "--standalone", "--non-interactive",
-        "--agree-tos", "--email", email, "-d", domain,
-    ]
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-        if result.returncode != 0:
-            return False, result.stderr.strip() or "certbot failed."
-        # copy live certs into /data/certs
-        live_dir = Path(f"/etc/letsencrypt/live/{domain}")
-        shutil.copy2(live_dir / "fullchain.pem", cert_path)
-        shutil.copy2(live_dir / "privkey.pem", key_path)
-        return True, f"Let's Encrypt certificate obtained for {domain}."
-    except subprocess.TimeoutExpired:
-        return False, "certbot timed out."
-    except Exception as e:
-        return False, f"certbot error: {e}"

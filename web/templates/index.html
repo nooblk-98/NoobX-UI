@@ -414,10 +414,6 @@
                   <i class="material-icons mdc-button__icon">folder_open</i>
                   <span class="mdc-button__label">Manual Paths</span>
                 </button>
-                <button type="button" class="mdc-button mdc-button--outlined cert-tab" data-tab="certbot" onclick="switchCertTab('certbot')">
-                  <i class="material-icons mdc-button__icon">lock</i>
-                  <span class="mdc-button__label">Let's Encrypt</span>
-                </button>
               </div>
 
               <!-- Self-signed panel -->
@@ -454,22 +450,6 @@
                 </form>
               </div>
 
-              <!-- Certbot panel -->
-              <div id="cert-panel-certbot" class="cert-panel" style="display:none;">
-                <p class="helper-text" style="margin-bottom:12px;">
-                  <i class="material-icons">info</i>Runs <code>certbot --standalone</code> using the domain configured in your settings. Port 80 must be free and reachable.
-                </p>
-                <form method="post" action="/cert/certbot">
-                  <div class="cfg-field" style="margin-bottom:14px;">
-                    <label class="cfg-label">Email Address (for renewal notices)</label>
-                    <input type="email" class="cfg-input" name="certbot_email" placeholder="you@example.com" required />
-                  </div>
-                  <button type="submit" class="mdc-button mdc-button--raised mdc-button--primary">
-                    <i class="material-icons mdc-button__icon">verified_user</i>
-                    <span class="mdc-button__label">Get Let's Encrypt Certificate</span>
-                  </button>
-                </form>
-              </div>
             </div>
 
             <!-- Backup & Restore -->

@@ -29,7 +29,7 @@ from .store import (
     build_config,
     write_config,
 )
-from .system import ensure_certs, ensure_dirs, regenerate_self_signed, run_certbot, save_manual_cert_paths
+from .system import ensure_certs, ensure_dirs, regenerate_self_signed, save_manual_cert_paths
 from .validator import validate_config
 from .xray_core import (
     _current_xray_key,
@@ -528,19 +528,6 @@ def create_app() -> Flask:
         if not cert_src or not key_src:
             return redirect(url_for("settings", error="Both certificate and key paths are required."))
         ok, msg = save_manual_cert_paths(cert_src, key_src)
-        if ok:
-            return redirect(url_for("settings", message=msg))
-        return redirect(url_for("settings", error=msg))
-
-    @app.route("/cert/certbot", methods=["POST"])
-    @login_required
-    def cert_certbot():
-        store = _load_store()
-        domain = store.get("domain", DOMAIN)
-        email = request.form.get("certbot_email", "").strip()
-        if not email:
-            return redirect(url_for("settings", error="An email address is required for Let's Encrypt."))
-        ok, msg = run_certbot(domain, email)
         if ok:
             return redirect(url_for("settings", message=msg))
         return redirect(url_for("settings", error=msg))
