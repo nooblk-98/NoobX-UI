@@ -4,60 +4,14 @@ services:
   proxyboard:
     image: lahiru98s/proxyboard:latest
     container_name: proxyboard
-    restart: unless-stopped
-    expose:
-      - "8088"
+    network_mode: host
     volumes:
       - proxyboard-data:/data
-      - certbot-certs:/etc/letsencrypt:ro
     environment:
       - UI_PORT=8088
-      - XRAY_DOMAIN=${DOMAIN}
-      # Optional auth — uncomment to enable login
-      # - UI_USERNAME=admin
-      # - UI_PASSWORD=yourpassword
-    depends_on:
-      - nginx
-
-  nginx:
-    image: nginx:alpine
-    container_name: proxyboard-nginx
+      - XRAY_DOMAIN=example.com
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "8088:8088"
-    volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - certbot-www:/var/www/certbot:ro
-      - certbot-certs:/etc/letsencrypt:ro
-    depends_on:
-      - certbot
-
-  certbot:
-    image: certbot/certbot:latest
-    container_name: proxyboard-certbot
-    volumes:
-      - certbot-www:/var/www/certbot
-      - certbot-certs:/etc/letsencrypt
-    entrypoint: >
-      sh -c "
-        certbot certonly --webroot --webroot-path=/var/www/certbot
-        --non-interactive --agree-tos
-        --email $${CERTBOT_EMAIL}
-        -d $${DOMAIN}
-        && while true; do
-          certbot renew --quiet --webroot --webroot-path=/var/www/certbot;
-          sleep 12h;
-        done
-      "
-    environment:
-      - DOMAIN=${DOMAIN}
-      - CERTBOT_EMAIL=${CERTBOT_EMAIL}
 
 volumes:
   proxyboard-data:
-    driver: local
-  certbot-www:
-    driver: local
-  certbot-certs:
     driver: local
