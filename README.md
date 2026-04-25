@@ -21,32 +21,6 @@ docker run -d \
 
 Open the UI at `http://your-server-ip:8088`
 
-#### With authentication enabled
-
-```bash
-docker run -d \
-  --name proxyboard \
-  --restart unless-stopped \
-  -p 8088:8088 \
-  -v proxyboard-data:/data \
-  -e XRAY_DOMAIN=yourdomain.com \
-  -e UI_USERNAME=admin \
-  -e UI_PASSWORD=yourpassword \
-  lahiru98s/proxyboard:latest
-```
-
-#### Using GHCR image
-
-```bash
-docker run -d \
-  --name proxyboard \
-  --restart unless-stopped \
-  -p 8088:8088 \
-  -v proxyboard-data:/data \
-  -e XRAY_DOMAIN=yourdomain.com \
-  ghcr.io/nooblk-98/proxyboard:latest
-```
-
 ---
 
 ### Option 2 — Docker Compose
