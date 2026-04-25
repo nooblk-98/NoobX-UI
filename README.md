@@ -70,12 +70,12 @@ Use `docker-compose-live.yml` for a fully production-ready setup with automatic 
 | Service | Role |
 |---|---|
 | `proxyboard` | App (internal, port 8088) |
-| `nginx` | Reverse proxy, HTTP→HTTPS redirect, SSL termination |
+| `nginx` | SSL termination on port 8088, port 80 for cert challenges only |
 | `certbot` | Obtains & auto-renews Let's Encrypt certificate |
 
 **Requirements:**
 - Domain DNS A record pointing to your server IP
-- Ports **80** and **443** open on your server
+- Ports **80** (certbot challenge) and **8088** (HTTPS panel) open on your server
 
 **Step 1 — Clone and configure**
 
@@ -102,7 +102,7 @@ CERTBOT_EMAIL=you@example.com
 docker compose -f docker-compose-live.yml up -d
 ```
 
-Certbot will automatically obtain a certificate on first start and renew it every 12 hours. The UI will be available at `https://yourdomain.com`.
+Certbot will automatically obtain a certificate on first start and renew it every 12 hours. The UI will be available at `https://yourdomain.com:8088`.
 
 **Step 3 — Apply Let's Encrypt certs to Xray**
 
