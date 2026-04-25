@@ -130,6 +130,17 @@ docker compose -f docker-compose-live.yml up -d
 
 Certbot will automatically obtain a certificate on first start and renew it every 12 hours. The UI will be available at `https://yourdomain.com`.
 
+**Step 3 — Apply Let's Encrypt certs to Xray**
+
+Once Certbot has issued a certificate, set it in ProxyBoard via **Settings → TLS Certificates → Manual Paths**:
+
+| Field | Value |
+|---|---|
+| Certificate | `/etc/letsencrypt/live/yourdomain.com/fullchain.pem` |
+| Private Key | `/etc/letsencrypt/live/yourdomain.com/privkey.pem` |
+
+The certbot volume is mounted read-only into the ProxyBoard container, so these paths are directly accessible.
+
 **Update to latest image:**
 
 ```bash
