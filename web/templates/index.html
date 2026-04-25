@@ -398,9 +398,78 @@
                   <span class="mdc-button__label">View JSON Status</span>
                 </a>
               </div>
-              <p class="helper-text">
-                <i class="material-icons">info</i>Self-signed TLS certificates are auto-generated at <code>/data/certs</code>. Replace for production use.
-              </p>
+            </div>
+
+            <!-- TLS Certificates -->
+            <div class="mdc-card settings-card">
+              <h6 class="settings-subtitle">TLS Certificates</h6>
+
+              <!-- Tab switcher -->
+              <div class="cert-tabs" style="display:flex;gap:8px;margin-bottom:16px;">
+                <button type="button" class="mdc-button mdc-button--outlined cert-tab cert-tab--active" data-tab="self-signed" onclick="switchCertTab('self-signed')">
+                  <i class="material-icons mdc-button__icon">shield</i>
+                  <span class="mdc-button__label">Self-Signed</span>
+                </button>
+                <button type="button" class="mdc-button mdc-button--outlined cert-tab" data-tab="manual" onclick="switchCertTab('manual')">
+                  <i class="material-icons mdc-button__icon">folder_open</i>
+                  <span class="mdc-button__label">Manual Paths</span>
+                </button>
+                <button type="button" class="mdc-button mdc-button--outlined cert-tab" data-tab="certbot" onclick="switchCertTab('certbot')">
+                  <i class="material-icons mdc-button__icon">lock</i>
+                  <span class="mdc-button__label">Let's Encrypt</span>
+                </button>
+              </div>
+
+              <!-- Self-signed panel -->
+              <div id="cert-panel-self-signed" class="cert-panel">
+                <p class="helper-text" style="margin-bottom:12px;">
+                  <i class="material-icons">info</i>Auto-generates a self-signed certificate at <code>/data/certs</code>. Use for testing only.
+                </p>
+                <form method="post" action="/cert/self-signed">
+                  <button type="submit" class="mdc-button mdc-button--raised mdc-button--primary">
+                    <i class="material-icons mdc-button__icon">autorenew</i>
+                    <span class="mdc-button__label">Regenerate Self-Signed Cert</span>
+                  </button>
+                </form>
+              </div>
+
+              <!-- Manual paths panel -->
+              <div id="cert-panel-manual" class="cert-panel" style="display:none;">
+                <p class="helper-text" style="margin-bottom:12px;">
+                  <i class="material-icons">info</i>Enter absolute paths to your existing certificate and key files on this server. They will be copied to <code>/data/certs</code>.
+                </p>
+                <form method="post" action="/cert/manual">
+                  <div class="cfg-field" style="margin-bottom:10px;">
+                    <label class="cfg-label">Certificate Path (.pem / .crt)</label>
+                    <input type="text" class="cfg-input" name="cert_path" placeholder="/etc/ssl/certs/fullchain.pem" required />
+                  </div>
+                  <div class="cfg-field" style="margin-bottom:14px;">
+                    <label class="cfg-label">Private Key Path (.pem / .key)</label>
+                    <input type="text" class="cfg-input" name="key_path" placeholder="/etc/ssl/private/privkey.pem" required />
+                  </div>
+                  <button type="submit" class="mdc-button mdc-button--raised mdc-button--primary">
+                    <i class="material-icons mdc-button__icon">save</i>
+                    <span class="mdc-button__label">Save Certificate</span>
+                  </button>
+                </form>
+              </div>
+
+              <!-- Certbot panel -->
+              <div id="cert-panel-certbot" class="cert-panel" style="display:none;">
+                <p class="helper-text" style="margin-bottom:12px;">
+                  <i class="material-icons">info</i>Runs <code>certbot --standalone</code> using the domain configured in your settings. Port 80 must be free and reachable.
+                </p>
+                <form method="post" action="/cert/certbot">
+                  <div class="cfg-field" style="margin-bottom:14px;">
+                    <label class="cfg-label">Email Address (for renewal notices)</label>
+                    <input type="email" class="cfg-input" name="certbot_email" placeholder="you@example.com" required />
+                  </div>
+                  <button type="submit" class="mdc-button mdc-button--raised mdc-button--primary">
+                    <i class="material-icons mdc-button__icon">verified_user</i>
+                    <span class="mdc-button__label">Get Let's Encrypt Certificate</span>
+                  </button>
+                </form>
+              </div>
             </div>
 
             <!-- Backup & Restore -->

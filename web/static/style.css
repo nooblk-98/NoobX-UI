@@ -829,6 +829,12 @@ a {
   background-color: #ffb74d;
 }
 
+.cert-tab--active {
+  background-color: var(--mdc-theme-primary) !important;
+  color: #fff !important;
+  border-color: var(--mdc-theme-primary) !important;
+}
+
 .mdc-button__icon {
   margin-left: -4px;
   margin-right: 8px;

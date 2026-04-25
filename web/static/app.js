@@ -16,6 +16,15 @@ function getThemeVars() {
   };
 }
 
+function switchCertTab(tab) {
+  document.querySelectorAll('.cert-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.cert-tab').forEach(b => b.classList.remove('cert-tab--active'));
+  const panel = document.getElementById('cert-panel-' + tab);
+  if (panel) panel.style.display = '';
+  const btn = document.querySelector('.cert-tab[data-tab="' + tab + '"]');
+  if (btn) btn.classList.add('cert-tab--active');
+}
+
 function openEditModal(editId) {
   const form = document.getElementById('configForm');
   let data = defaultsData;
