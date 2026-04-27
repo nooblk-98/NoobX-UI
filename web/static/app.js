@@ -1,40 +1,105 @@
-const configsData = window.CONFIGS_DATA || [];
-const defaultsData = window.DEFAULTS_DATA || {};
-let pollIntervalId = null;
-let _netMaxKB = 128; // dynamic ceiling for upload/download gauges (KB/s)
+let configsData = [];
+let defaultsData = {};
+let _netMaxKB = 128;
+
+// DOM Cache & State
+const domCache = new Map();
+function getEl(id) {
+  if (!domCache.has(id)) {
+    const el = document.getElementById(id);
+    if (el) domCache.set(id, el);
+    return el;
+  }
+  return domCache.get(id);
+}
+
+const uiState = {
+  cpu: null,
+  mem: null,
+  upPct: null,
+  downPct: null,
+  memDetail: null,
+  upSpeed: null,
+  downSpeed: null,
+  diskPct: null,
+  diskDetail: null,
+  uptime: null,
+  lastPorts: []
+};
+
+function setTheme(theme) {
+  document.documentElement.className = 'theme-' + theme;
+  localStorage.setItem('theme', theme);
+  const themeToggle = getEl('theme-toggle');
+  if (themeToggle) themeToggle.checked = (theme === 'light');
+
+  // If chart exists, re-init to pick up new colors
+  if (trafficChart) {
+    trafficChart.destroy();
+    initChart();
+  }
+  // Re-draw gauges
+  Object.keys(gaugeValues).forEach(k => {
+    updateGauge(k + 'Gauge', gaugeValues[k], k);
+  });
+}
+
+function setReducedMotion(enabled) {
+  if (enabled) document.body.classList.add('reduced-motion');
+  else document.body.classList.remove('reduced-motion');
+  localStorage.setItem('reduced_motion', enabled ? '1' : '0');
+}
 
 function getThemeVars() {
-  const styles = getComputedStyle(document.documentElement);
+  const isLight = document.documentElement.classList.contains('theme-light');
   return {
-    gaugeInnerBg: styles.getPropertyValue('--gauge-inner-bg').trim() || '#1a1a2e',
-    gaugeEmptyTick: styles.getPropertyValue('--gauge-empty-tick').trim() || 'rgba(255,255,255,0.10)',
-    gaugeRingBorder: styles.getPropertyValue('--gauge-ring-border').trim() || 'rgba(255,255,255,0.06)',
-    gaugeText: styles.getPropertyValue('--gauge-text').trim() || '#ffffff',
-    gaugeUnitText: styles.getPropertyValue('--gauge-unit-text').trim() || 'rgba(255,255,255,0.60)',
-    chartGrid: styles.getPropertyValue('--chart-grid').trim() || 'rgba(255,255,255,0.1)',
-    chartText: styles.getPropertyValue('--chart-text').trim() || 'rgba(255,255,255,0.7)'
+    gaugeInnerBg: isLight ? '#ffffff' : '#1e1e26',
+    gaugeRingBorder: isLight ? '#e0e0e0' : '#2d2d3d',
+    gaugeEmptyTick: isLight ? '#f0f0f0' : '#2d2d3d',
+    gaugeText: isLight ? '#121212' : '#ffffff',
+    gaugeUnitText: isLight ? '#757575' : '#9499b3',
+    chartGrid: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)',
+    chartText: isLight ? '#666' : '#9499b3'
   };
+}
+
+let _pollTimer = null;
+function startPolling(interval) {
+  stopPolling();
+  _pollTimer = setInterval(pollStatus, interval);
+}
+function stopPolling() {
+  if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+}
+
+function genUuid(inputName) {
+  const input = document.querySelector(`input[name="${inputName}"]`);
+  if (input) {
+    input.value = crypto.randomUUID();
+  }
 }
 
 function switchCertTab(tab) {
   document.querySelectorAll('.cert-panel').forEach(p => p.style.display = 'none');
   document.querySelectorAll('.cert-tab').forEach(b => b.classList.remove('cert-tab--active'));
-  const panel = document.getElementById('cert-panel-' + tab);
+  const panel = getEl('cert-panel-' + tab);
   if (panel) panel.style.display = '';
   const btn = document.querySelector('.cert-tab[data-tab="' + tab + '"]');
   if (btn) btn.classList.add('cert-tab--active');
 }
 
 function openEditModal(editId) {
-  const form = document.getElementById('configForm');
+  const form = getEl('configForm');
   let data = defaultsData;
 
   if (editId !== 'new') {
     const found = configsData.find(c => c.id === editId);
     if (found) { data = Object.assign({}, defaultsData, found); }
-    document.getElementById('edit-modal-title').textContent = 'Edit Configuration';
+    const title = getEl('edit-modal-title');
+    if (title) title.textContent = 'Edit Configuration';
   } else {
-    document.getElementById('edit-modal-title').textContent = 'New Configuration';
+    const title = getEl('edit-modal-title');
+    if (title) title.textContent = 'New Configuration';
   }
 
   form.elements['edit_id'].value = editId === 'new' ? '' : editId;
@@ -62,7 +127,8 @@ function openEditModal(editId) {
   form.elements['dns'].value = data.dns || '1.1.1.1';
 
   toggleTransport();
-  document.getElementById('edit-modal-scrim').style.display = 'flex';
+  const scrim = getEl('edit-modal-scrim');
+  if (scrim) scrim.style.display = 'flex';
 }
 
 let trafficChart;
@@ -71,9 +137,11 @@ const trafficLabels = Array(maxDataPoints).fill('');
 const upData = Array(maxDataPoints).fill(0);
 const downData = Array(maxDataPoints).fill(0);
 const gaugeValues = { cpu: 0, mem: 0, upload: 0, download: 0 };
+const gaugeRequestIds = {};
 
 function drawSegmentedGauge(canvasId, value, color, label) {
-  const canvas = document.getElementById(canvasId);
+  const canvas = getEl(canvasId);
+  if (!canvas) return;
   const ctx = canvas.getContext('2d');
   const W = canvas.width;
   const H = canvas.height;
@@ -83,7 +151,6 @@ function drawSegmentedGauge(canvasId, value, color, label) {
 
   ctx.clearRect(0, 0, W, H);
 
-  // Clip to canvas bounds so shadow never bleeds outside
   ctx.save();
   ctx.beginPath();
   ctx.rect(0, 0, W, H);
@@ -93,40 +160,60 @@ function drawSegmentedGauge(canvasId, value, color, label) {
   const filledTicks = Math.round((value / 100) * totalTicks);
   const isNetwork = (canvasId === 'uploadGauge' || canvasId === 'downloadGauge');
 
-  // Scale radii relative to canvas size so gauges fit at any resolution
   const scale = Math.min(W, H) / 180;
   const ringInner = Math.round(62 * scale);
   const ringOuter = Math.round(78 * scale);
   const shortOuter = Math.round(73 * scale);
 
-  // Draw empty ticks first (no shadow), then filled ticks on top
-  for (let i = 0; i < totalTicks; i++) {
-    if (i < filledTicks) continue;
-    const angle = (i / totalTicks) * Math.PI * 2 - Math.PI / 2;
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(angle);
-    ctx.fillStyle = themeVars.gaugeEmptyTick;
-    ctx.fillRect(ringInner, -1, shortOuter - ringInner, 2);
-    ctx.restore();
-  }
+  // Background ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, (ringInner + ringOuter) / 2, 0, Math.PI * 2);
+  ctx.strokeStyle = themeVars.gaugeEmptyTick;
+  ctx.lineWidth = ringOuter - ringInner;
+  ctx.stroke();
 
-  for (let i = 0; i < filledTicks; i++) {
-    const angle = (i / totalTicks) * Math.PI * 2 - Math.PI / 2;
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(angle);
-    ctx.fillStyle = color;
+  // Progress ring with gradient
+  if (filledTicks > 0) {
+    const startAngle = -Math.PI / 2;
+    const endAngle = startAngle + (value / 100) * Math.PI * 2;
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, (ringInner + ringOuter) / 2, startAngle, endAngle);
+
+    const gradient = ctx.createSweepGradient ? ctx.createSweepGradient(cx, cy) : null;
+    if (gradient) {
+        gradient.addColorStop(0, color);
+        gradient.addColorStop(1, color);
+        ctx.strokeStyle = gradient;
+    } else {
+        ctx.strokeStyle = color;
+    }
+
+    ctx.lineCap = 'round';
+    ctx.lineWidth = ringOuter - ringInner;
     ctx.shadowColor = color;
-    ctx.shadowBlur = 6;
-    ctx.fillRect(ringInner, -1.5, ringOuter - ringInner, 3);
+    ctx.shadowBlur = 10 * scale;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // Segmented Ticks (Overlay)
+  for (let i = 0; i < totalTicks; i++) {
+    const angle = (i / totalTicks) * Math.PI * 2 - Math.PI / 2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+    ctx.fillStyle = themeVars.gaugeInnerBg;
+    // Tick width of 2px for segmentation
+    ctx.fillRect(ringInner - 2, -1, (ringOuter - ringInner) + 4, 2);
     ctx.restore();
   }
 
-  ctx.restore(); // remove clip
+  ctx.restore();
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
 
+  // Inner Circle
   ctx.beginPath();
   ctx.arc(cx, cy, ringInner - Math.round(4 * scale), 0, Math.PI * 2);
   ctx.fillStyle = themeVars.gaugeInnerBg;
@@ -151,7 +238,7 @@ function drawSegmentedGauge(canvasId, value, color, label) {
   ctx.font = `bold ${fontSize}px "Roboto", sans-serif`;
   ctx.fillStyle = themeVars.gaugeText;
   ctx.shadowColor = color;
-  ctx.shadowBlur = 10;
+  ctx.shadowBlur = 5 * scale;
   ctx.fillText(numStr, cx, cy - numOffsetY);
 
   ctx.font = `500 ${unitSize}px "Roboto", sans-serif`;
@@ -162,18 +249,23 @@ function drawSegmentedGauge(canvasId, value, color, label) {
 }
 
 function updateGauge(canvasId, value, type) {
+  if (gaugeValues[type] === value) return;
   gaugeValues[type] = value;
 
-  let color;
-  switch (type) {
-    case 'cpu': color = '#00ff88'; break;
-    case 'mem': color = '#ff2d6f'; break;
-    case 'upload': color = '#bb86fc'; break;
-    case 'download': color = '#00cfff'; break;
-    default: color = '#00cfff';
-  }
+  if (gaugeRequestIds[canvasId]) cancelAnimationFrame(gaugeRequestIds[canvasId]);
 
-  drawSegmentedGauge(canvasId, value, color, type);
+  gaugeRequestIds[canvasId] = requestAnimationFrame(() => {
+    let color;
+    switch (type) {
+      case 'cpu': color = '#00ff88'; break;
+      case 'mem': color = '#ff2d6f'; break;
+      case 'upload': color = '#bb86fc'; break;
+      case 'download': color = '#00cfff'; break;
+      default: color = '#00cfff';
+    }
+    drawSegmentedGauge(canvasId, value, color, type);
+    delete gaugeRequestIds[canvasId];
+  });
 }
 
 function initChart() {
@@ -183,7 +275,18 @@ function initChart() {
   updateGauge('uploadGauge', 0, 'upload');
   updateGauge('downloadGauge', 0, 'download');
 
-  const ctx = document.getElementById('trafficChart').getContext('2d');
+  const chartEl = getEl('trafficChart');
+  if (!chartEl) return;
+  const ctx = chartEl.getContext('2d');
+
+  const upGradient = ctx.createLinearGradient(0, 0, 0, 400);
+  upGradient.addColorStop(0, 'rgba(187, 134, 252, 0.4)');
+  upGradient.addColorStop(1, 'rgba(187, 134, 252, 0)');
+
+  const downGradient = ctx.createLinearGradient(0, 0, 0, 400);
+  downGradient.addColorStop(0, 'rgba(3, 218, 198, 0.4)');
+  downGradient.addColorStop(1, 'rgba(3, 218, 198, 0)');
+
   trafficChart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -192,8 +295,8 @@ function initChart() {
         {
           label: 'Upload (KB/s)',
           data: upData,
-          borderColor: 'rgba(187, 134, 252, 1)',
-          backgroundColor: 'rgba(187, 134, 252, 0.2)',
+          borderColor: '#bb86fc',
+          backgroundColor: upGradient,
           borderWidth: 2,
           pointRadius: 0,
           tension: 0.4,
@@ -202,8 +305,8 @@ function initChart() {
         {
           label: 'Download (KB/s)',
           data: downData,
-          borderColor: 'rgba(3, 218, 198, 1)',
-          backgroundColor: 'rgba(3, 218, 198, 0.2)',
+          borderColor: '#03dac6',
+          backgroundColor: downGradient,
           borderWidth: 2,
           pointRadius: 0,
           tension: 0.4,
@@ -219,12 +322,22 @@ function initChart() {
         x: { display: false },
         y: {
           beginAtZero: true,
-          grid: { color: themeVars.chartGrid },
-          ticks: { color: themeVars.chartText }
+          grid: { color: themeVars.chartGrid, drawTicks: false },
+          ticks: { color: themeVars.chartText, font: { size: 10 } }
         }
       },
       plugins: {
-        legend: { labels: { color: themeVars.chartText } }
+        legend: {
+            position: 'top',
+            align: 'end',
+            labels: {
+                color: themeVars.chartText,
+                boxWidth: 8,
+                boxHeight: 8,
+                usePointStyle: true,
+                font: { size: 11 }
+            }
+        }
       }
     }
   });
@@ -239,7 +352,6 @@ async function pollStatus() {
     const cpuValue = parseFloat(si.cpu) || 0;
     const memValue = parseFloat(si.mem) || 0;
 
-    // Track rolling max for dynamic gauge scaling (in KB/s)
     _netMaxKB = Math.max(_netMaxKB * 0.95, data.up_raw, data.down_raw, 128);
     const upPct   = Math.min((data.up_raw   / _netMaxKB) * 100, 100);
     const downPct = Math.min((data.down_raw / _netMaxKB) * 100, 100);
@@ -249,39 +361,58 @@ async function pollStatus() {
     updateGauge('uploadGauge',    upPct,                   'upload');
     updateGauge('downloadGauge',  downPct,                 'download');
 
-    // Gauge sublabels
-    const memDetail = document.getElementById('mem-detail');
-    if (memDetail && si.mem_used_str) memDetail.textContent = `${si.mem_used_str} / ${si.mem_total_str}`;
-    const upLabel = document.getElementById('up-speed-label');
-    if (upLabel) upLabel.textContent = data.up_speed || '';
-    const downLabel = document.getElementById('down-speed-label');
-    if (downLabel) downLabel.textContent = data.down_speed || '';
-
-    // Disk
-    const diskPct = document.getElementById('disk-pct');
-    const diskBar = document.getElementById('disk-bar');
-    const diskDetail = document.getElementById('disk-detail');
-    if (si.disk_pct !== undefined) {
-      if (diskPct) diskPct.textContent = si.disk_pct + '%';
-      if (diskBar) diskBar.style.width = si.disk_pct + '%';
-      if (diskDetail) diskDetail.textContent = `${si.disk_used_str} / ${si.disk_total_str}`;
+    // Gauge sublabels with dirty checking
+    const memDetailVal = `${si.mem_used_str} / ${si.mem_total_str}`;
+    if (uiState.memDetail !== memDetailVal) {
+      const el = getEl('mem-detail');
+      if (el) el.textContent = memDetailVal;
+      uiState.memDetail = memDetailVal;
     }
 
-    // Network cards
-    const netUp = document.getElementById('net-up');
-    const netDown = document.getElementById('net-down');
-    if (netUp) netUp.textContent = data.up_speed || '—';
-    if (netDown) netDown.textContent = data.down_speed || '—';
+    if (uiState.upSpeed !== data.up_speed) {
+      const el = getEl('up-speed-label');
+      if (el) el.textContent = data.up_speed || '';
+      const netUp = getEl('net-up');
+      if (netUp) netUp.textContent = data.up_speed || '—';
+      uiState.upSpeed = data.up_speed;
+    }
+
+    if (uiState.downSpeed !== data.down_speed) {
+      const el = getEl('down-speed-label');
+      if (el) el.textContent = data.down_speed || '';
+      const netDown = getEl('net-down');
+      if (netDown) netDown.textContent = data.down_speed || '—';
+      uiState.downSpeed = data.down_speed;
+    }
+
+    // Disk
+    if (si.disk_pct !== undefined && uiState.diskPct !== si.disk_pct) {
+      const elPct = getEl('disk-pct');
+      if (elPct) elPct.textContent = si.disk_pct + '%';
+      const elBar = getEl('disk-bar');
+      if (elBar) elBar.style.width = si.disk_pct + '%';
+      uiState.diskPct = si.disk_pct;
+    }
+
+    const diskDetailVal = `${si.disk_used_str} / ${si.disk_total_str}`;
+    if (si.disk_used_str && uiState.diskDetail !== diskDetailVal) {
+      const el = getEl('disk-detail');
+      if (el) el.textContent = diskDetailVal;
+      uiState.diskDetail = diskDetailVal;
+    }
 
     // Uptime
-    const uptimeEl = document.getElementById('dash-uptime');
-    if (uptimeEl && si.uptime_str) uptimeEl.textContent = si.uptime_str;
+    if (si.uptime_str && uiState.uptime !== si.uptime_str) {
+      const el = getEl('dash-uptime');
+      if (el) el.textContent = si.uptime_str;
+      uiState.uptime = si.uptime_str;
+    }
 
     // Traffic chart
     if (trafficChart) {
       upData.shift(); upData.push(data.up_raw);
       downData.shift(); downData.push(data.down_raw);
-      trafficChart.update();
+      trafficChart.update('none'); // Update without animation
     }
 
     // Per-config traffic table
@@ -289,144 +420,78 @@ async function pollStatus() {
       document.querySelectorAll('.dash-traffic-row').forEach(row => {
         const email = row.getAttribute('data-email');
         const port = parseInt(row.getAttribute('data-port'));
-        const type = row.getAttribute('data-type');
         const stats = data.xray_stats[email];
         const usageEl = row.querySelector('.dash-traffic-usage');
         const speedEl = row.querySelector('.dash-traffic-speed');
         const dotEl = row.querySelector('.dash-status-dot');
         const active = data.active_ports && data.active_ports.includes(port);
-        if (dotEl) { dotEl.className = 'dash-status-dot ' + (active ? 'green' : 'grey'); }
+
+        if (dotEl) {
+           const currentClass = dotEl.className;
+           const targetClass = 'dash-status-dot ' + (active ? 'green' : 'grey');
+           if (currentClass !== targetClass) dotEl.className = targetClass;
+        }
         if (stats) {
-          if (usageEl) usageEl.textContent = stats.total_str;
-          if (speedEl) speedEl.textContent = stats.speed_str;
+          if (usageEl && usageEl.textContent !== stats.total_str) usageEl.textContent = stats.total_str;
+          if (speedEl && speedEl.textContent !== stats.speed_str) speedEl.textContent = stats.speed_str;
         }
       });
     }
 
-    // Config cards live status (configurations page)
-    if (data.active_ports) {
-      document.querySelectorAll('.config-card').forEach(card => {
-        const wsPortStr = card.getAttribute('data-ws-port');
-        const tlsPortStr = card.getAttribute('data-tls-port');
-        const enableWs = card.getAttribute('data-ws-en') === 'True';
-        const enableTls = card.getAttribute('data-tls-en') === 'True';
-        let isActive = false;
-        if (enableWs && wsPortStr && data.active_ports.includes(parseInt(wsPortStr))) isActive = true;
-        if (enableTls && tlsPortStr && data.active_ports.includes(parseInt(tlsPortStr))) isActive = true;
-        const statusDot = card.querySelector('.config-live-status');
-        if (statusDot) {
-          statusDot.innerHTML = isActive
-            ? '<span class="status-dot green"></span><span class="status-text success-text">Active Link</span>'
-            : '<span class="status-dot grey"></span><span class="status-text text-muted">Idle</span>';
-        }
-        const wsEmailStr = card.getAttribute('data-ws-email');
-        const tlsEmailStr = card.getAttribute('data-tls-email');
-        const usageSpan = card.querySelector('.config-usage');
-        if (usageSpan && data.xray_stats) {
-          let usageText = '';
-          if (enableWs && wsEmailStr && data.xray_stats[wsEmailStr])
-            usageText += `WS: ${data.xray_stats[wsEmailStr].total_str} `;
-          if (enableTls && tlsEmailStr && data.xray_stats[tlsEmailStr])
-            usageText += `TLS: ${data.xray_stats[tlsEmailStr].total_str}`;
-          usageSpan.textContent = usageText.trim();
-        }
-      });
-    }
-  } catch (err) {
-    console.error('Failed to update status', err);
-  }
-}
+    // Update individual config cards
+    document.querySelectorAll('.config-card').forEach(card => {
+      const wsEmail = card.getAttribute('data-ws-email');
+      const tlsEmail = card.getAttribute('data-tls-email');
+      const wsPort = parseInt(card.getAttribute('data-ws-port'));
+      const tlsPort = parseInt(card.getAttribute('data-tls-port'));
 
-function applyThemeToChart() {
-  if (!trafficChart) return;
-  const themeVars = getThemeVars();
-  trafficChart.options.scales.y.grid.color = themeVars.chartGrid;
-  trafficChart.options.scales.y.ticks.color = themeVars.chartText;
-  trafficChart.options.plugins.legend.labels.color = themeVars.chartText;
-  trafficChart.update();
-}
+      const wsActive = data.active_ports && data.active_ports.includes(wsPort);
+      const tlsActive = data.active_ports && data.active_ports.includes(tlsPort);
+      const isActive = wsActive || tlsActive;
 
-function refreshGaugeTheme() {
-  updateGauge('cpuGauge', gaugeValues.cpu, 'cpu');
-  updateGauge('memGauge', gaugeValues.mem, 'mem');
-  updateGauge('uploadGauge', gaugeValues.upload, 'upload');
-  updateGauge('downloadGauge', gaugeValues.download, 'download');
-}
+      const dot = card.querySelector('.status-dot');
+      const txt = card.querySelector('.status-text');
+      const usage = card.querySelector('.config-usage');
 
-function setTheme(mode) {
-  const root = document.documentElement;
-  const isLight = mode === 'light';
-  root.classList.toggle('theme-light', isLight);
-  localStorage.setItem('theme', isLight ? 'light' : 'dark');
-  applyThemeToChart();
-  refreshGaugeTheme();
-  const favicon = document.getElementById('favicon');
-  if (favicon) favicon.href = isLight ? '/static/icon-dark.svg' : '/static/icon-light.svg';
-}
-
-function setReducedMotion(enabled) {
-  const root = document.documentElement;
-  root.classList.toggle('reduced-motion', enabled);
-  localStorage.setItem('reduced_motion', enabled ? '1' : '0');
-}
-
-function startPolling(intervalMs) {
-  if (pollIntervalId) {
-    clearInterval(pollIntervalId);
-  }
-  pollIntervalId = setInterval(pollStatus, intervalMs);
-}
-
-function stopPolling() {
-  if (pollIntervalId) {
-    clearInterval(pollIntervalId);
-    pollIntervalId = null;
-  }
-}
-
-if (document.getElementById('trafficChart')) {
-  initChart();
-}
-
-const navItems = document.querySelectorAll('.mdc-list-item');
-const sections = document.querySelectorAll('.content-section');
-const pageTitle = document.getElementById('page-title');
-
-// Set page title based on active section
-function updatePageTitle() {
-  sections.forEach(sec => {
-    if (sec.classList.contains('active')) {
-      const navItem = [...navItems].find(item => 
-        item.classList.contains('mdc-list-item--activated')
-      );
-      if (navItem) {
-        pageTitle.textContent = navItem.querySelector('.mdc-list-item__text').textContent;
+      if (dot) {
+        const targetDotClass = 'status-dot ' + (isActive ? 'green' : 'grey');
+        if (dot.className !== targetDotClass) dot.className = targetDotClass;
       }
-    }
-  });
+      if (txt) {
+        const targetTxt = isActive ? 'Active' : 'Idle';
+        if (txt.textContent !== targetTxt) {
+          txt.textContent = targetTxt;
+          txt.className = 'status-text ' + (isActive ? 'text-success' : 'text-muted');
+        }
+      }
+
+      let combinedUsage = '';
+      if (data.xray_stats) {
+        if (wsEmail && data.xray_stats[wsEmail]) combinedUsage += data.xray_stats[wsEmail].total_str;
+        if (tlsEmail && data.xray_stats[tlsEmail]) {
+          if (combinedUsage) combinedUsage += ' / ';
+          combinedUsage += data.xray_stats[tlsEmail].total_str;
+        }
+      }
+      if (usage && usage.textContent !== combinedUsage) usage.textContent = combinedUsage;
+    });
+
+  } catch (e) {
+    console.error('Poll failed', e);
+  }
 }
 
-updatePageTitle();
+// ── Shared Helper Functions ───────────────────────────────────
+function getUuidFromUrl(url) {
+  const match = url.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  return match ? match[0] : null;
+}
 
-setTimeout(() => {
-  const snackbars = document.querySelectorAll('.mdc-snackbar');
-  snackbars.forEach(s => s.style.opacity = '0');
-  setTimeout(() => snackbars.forEach(s => s.remove()), 300);
-}, 3000);
-
-function genUuid(field) {
-  const input = document.querySelector(`input[name="${field}"]`);
-  if (!input) return;
-  if (window.crypto?.randomUUID) {
-    input.value = window.crypto.randomUUID();
-    return;
-  }
-  const bytes = new Uint8Array(16);
-  window.crypto.getRandomValues(bytes);
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
-  input.value = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+function formatUuid(uuid) {
+  if (!uuid) return '';
+  const hex = uuid.replace(/-/g, '');
+  if (hex.length !== 32) return uuid;
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 function copyUrl(button) {
@@ -487,35 +552,35 @@ function showCopySuccess(button) {
 
 function closeModal(event) {
   if (event.target.classList.contains("mdc-dialog-scrim") && event.target.id === "edit-modal-scrim") {
-    document.getElementById("edit-modal-scrim").style.display = "none";
+    getEl("edit-modal-scrim").style.display = "none";
   } else if (event.target.classList.contains("mdc-dialog-scrim") && event.target.id !== "qr-modal-scrim") {
-    document.getElementById("edit-modal-scrim").style.display = "none";
+    getEl("edit-modal-scrim").style.display = "none";
   }
 }
 
 function closeModalDirect() {
-  document.getElementById("edit-modal-scrim").style.display = "none";
+  getEl("edit-modal-scrim").style.display = "none";
 }
 
 function openQrModal(src) {
-  document.getElementById("qr-modal-img").src = src;
-  document.getElementById("qr-modal-scrim").style.display = "flex";
+  getEl("qr-modal-img").src = src;
+  getEl("qr-modal-scrim").style.display = "flex";
 }
 
 function closeQrModal(event) {
   if (event.target.id === "qr-modal-scrim") {
-    document.getElementById("qr-modal-scrim").style.display = "none";
+    getEl("qr-modal-scrim").style.display = "none";
   }
 }
 
 function closeQrModalDirect() {
-  document.getElementById("qr-modal-scrim").style.display = "none";
+  getEl("qr-modal-scrim").style.display = "none";
 }
 
 function toggleTransport() {
   const select = document.querySelector('select[name="network_security"]');
-  const wsSection = document.getElementById('ws_section');
-  const tlsSection = document.getElementById('tls_section');
+  const wsSection = getEl('ws_section');
+  const tlsSection = getEl('tls_section');
   if (select && wsSection && tlsSection) {
     if (select.value === 'ws') {
       wsSection.style.display = 'block';
@@ -527,10 +592,10 @@ function toggleTransport() {
   }
 }
 
-const themeToggle = document.getElementById('theme-toggle');
-const motionToggle = document.getElementById('motion-toggle');
-const refreshToggle = document.getElementById('refresh-toggle');
-const refreshInterval = document.getElementById('refresh-interval');
+const themeToggle = getEl('theme-toggle');
+const motionToggle = getEl('motion-toggle');
+const refreshToggle = getEl('refresh-toggle');
+const refreshInterval = getEl('refresh-interval');
 
 const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
 const storedTheme = localStorage.getItem('theme');
@@ -579,7 +644,7 @@ if (refreshInterval) {
   });
 }
 
-if (refreshEnabled && document.getElementById('trafficChart')) {
+if (refreshEnabled && getEl('trafficChart')) {
   startPolling(storedInterval);
   pollStatus();
 }
@@ -592,16 +657,16 @@ function switchLog(type, btn) {
   document.querySelectorAll('.log-tab').forEach(t => t.classList.remove('active'));
   if (btn) btn.classList.add('active');
   _currentLogType = type;
-  const viewer = document.getElementById('log-viewer');
+  const viewer = getEl('log-viewer');
   if (viewer) viewer.innerHTML = '';
-  if (document.getElementById('log-live-toggle')?.checked) {
+  if (getEl('log-live-toggle')?.checked) {
     startLogStream(type);
   }
 }
 
 function startLogStream(type) {
   if (_logEs) { _logEs.close(); _logEs = null; }
-  const viewer = document.getElementById('log-viewer');
+  const viewer = getEl('log-viewer');
   if (!viewer) return;
 
   _logEs = new EventSource(`/logs/stream/${type}`);
@@ -619,11 +684,11 @@ function startLogStream(type) {
 }
 
 function clearLogView() {
-  const viewer = document.getElementById('log-viewer');
+  const viewer = getEl('log-viewer');
   if (viewer) viewer.innerHTML = '';
 }
 
-const logLiveToggle = document.getElementById('log-live-toggle');
+const logLiveToggle = getEl('log-live-toggle');
 if (logLiveToggle) {
   if (logLiveToggle.checked) startLogStream(_currentLogType);
   logLiveToggle.addEventListener('change', e => {
@@ -638,7 +703,7 @@ if (logLiveToggle) {
 // ── Config Validate ───────────────────────────────────────────
 async function validateConfig() {
   const btn = document.querySelector('[onclick="validateConfig()"]');
-  const result = document.getElementById('validate-result');
+  const result = getEl('validate-result');
   if (!result) return;
   if (btn) btn.disabled = true;
   result.style.display = 'block';
@@ -680,11 +745,11 @@ if (switchForm) {
 }
 
 function openDownloadModal(versionKey) {
-  const scrim = document.getElementById('dl-modal-scrim');
-  const title = document.getElementById('dl-modal-title');
-  const statusEl = document.getElementById('dl-modal-status');
-  const bar = document.getElementById('dl-progress-bar');
-  const pctEl = document.getElementById('dl-progress-pct');
+  const scrim = getEl('dl-modal-scrim');
+  const title = getEl('dl-modal-title');
+  const statusEl = getEl('dl-modal-status');
+  const bar = getEl('dl-progress-bar');
+  const pctEl = getEl('dl-progress-pct');
 
   title.textContent = `Installing Xray ${versionKey}`;
   statusEl.textContent = 'Connecting...';
