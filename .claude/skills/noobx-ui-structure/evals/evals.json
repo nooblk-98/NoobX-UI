@@ -1,0 +1,23 @@
+{
+  "skill_name": "noobx-ui-structure",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I want to add a new /logs page to the NoobX-UI Flask app that shows the Xray access log. Where should the template, route, and any new Python module go? Please create the files in the right places.",
+      "expected_output": "Route added to app/ui/routes.py (or a new app/ui/routes/ module), template at app/templates/logs.html (or partials), log reading logic in app/ui/log_reader.py. No new top-level dirs created.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Write a Python script that scans /opt/xray/versions and deletes any Xray binary versions that are not listed as the default in xray-versions.json. Where should this script live in the NoobX-UI project?",
+      "expected_output": "Script placed in scripts/ directory (e.g. scripts/prune_xray_versions.py), NOT inside app/ui/. Script is standalone and not imported by the Flask app.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "I need to add a new env var MAX_CONNECTIONS=100 to the NoobX-UI app that limits concurrent proxy connections. Walk me through where to document it and how to read it in the Python code.",
+      "expected_output": "Document in .env.example with a safe default. Read via os.getenv() only in app/ui/constants.py. All other modules import the constant from constants.py rather than calling os.getenv() directly.",
+      "files": []
+    }
+  ]
+}

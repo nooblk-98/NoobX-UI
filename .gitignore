@@ -75,4 +75,3 @@ xray-versions-local/
 # Backup files
 *.bak
 noobx-backup-*.json
-.claude
