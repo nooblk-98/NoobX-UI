@@ -26,7 +26,7 @@ COPY scripts/ /opt/xray/scripts/
 RUN python3 /opt/xray/scripts/download_xray_versions.py --only-default
 
 RUN XRAY_VER=$(python3 -c "import json; d=json.load(open('/opt/xray/versions.json')); \
-    print(d[0]['version'] if isinstance(d, list) else list(d.values())[0]['version'])") \
+    v=d if isinstance(d, list) else d['versions']; print(v[0])") \
     && ln -sf /opt/xray/versions/${XRAY_VER}/xray /usr/local/bin/xray \
     && chmod +x /usr/local/bin/xray
 
