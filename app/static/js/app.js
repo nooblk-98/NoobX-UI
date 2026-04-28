@@ -61,7 +61,13 @@ function openEditModal(editId) {
   form.elements['alpn'].value = data.alpn || 'h2,h3,http/1.1';
   form.elements['dns'].value = data.dns || '1.1.1.1';
 
+  form.elements['socks5_enabled'].checked = !!data.socks5_enabled;
+  form.elements['socks5_port'].value = data.socks5_port || 1080;
+  form.elements['socks5_username'].value = data.socks5_username || '';
+  form.elements['socks5_password'].value = data.socks5_password || '';
+
   toggleTransport();
+  toggleSocks5();
   document.getElementById('edit-modal-scrim').style.display = 'flex';
 }
 
@@ -510,6 +516,14 @@ function closeQrModal(event) {
 
 function closeQrModalDirect() {
   document.getElementById("qr-modal-scrim").style.display = "none";
+}
+
+function toggleSocks5() {
+  const cb = document.querySelector('input[name="socks5_enabled"]');
+  const fields = document.getElementById('socks5_fields');
+  if (cb && fields) {
+    fields.style.display = cb.checked ? 'grid' : 'none';
+  }
 }
 
 function toggleTransport() {

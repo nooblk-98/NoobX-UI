@@ -175,6 +175,39 @@
           </div>
         </div>
 
+        <!-- SOCKS5 -->
+        <div class="cfg-section">
+          <div class="cfg-section__label"><i class="material-icons">swap_horiz</i> SOCKS5 Proxy</div>
+          <div class="cfg-grid cfg-grid--2">
+            <div class="cfg-field cfg-field--full">
+              <label class="cfg-label" style="display:flex;align-items:center;gap:8px;">
+                <input type="checkbox" name="socks5_enabled" value="1"
+                  {% if form.socks5_enabled %}checked{% endif %}
+                  onchange="toggleSocks5()">
+                Enable SOCKS5 Inbound
+              </label>
+            </div>
+            <div id="socks5_fields" {% if not form.socks5_enabled %}style="display:none"{% endif %}
+              class="cfg-field--full cfg-grid cfg-grid--2" style="padding:0;margin:0;grid-column:1/-1;">
+              <div class="cfg-field">
+                <label class="cfg-label">Port</label>
+                <input type="number" class="cfg-input" name="socks5_port"
+                  value="{{ form.socks5_port or 1080 }}" placeholder="1080">
+              </div>
+              <div class="cfg-field">
+                <label class="cfg-label">Username</label>
+                <input type="text" class="cfg-input" name="socks5_username"
+                  value="{{ form.socks5_username or '' }}" placeholder="socks5user">
+              </div>
+              <div class="cfg-field cfg-field--full">
+                <label class="cfg-label">Password <span style="color:var(--text-muted);font-size:0.78rem;">(leave blank for no-auth)</span></label>
+                <input type="text" class="cfg-input" name="socks5_password"
+                  value="{{ form.socks5_password or '' }}" placeholder="leave blank for no auth">
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div><!-- /.cfg-dialog__body -->
 
       <!-- Sticky footer -->
